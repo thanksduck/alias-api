@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	repository "github.com/thanksduck/alias-api/Repository"
+	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
@@ -34,6 +35,14 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You are not allowed to delete this rule", http.StatusForbidden)
 		return
 	}
+
+	err = requests.CreateRuleRequest(`DELETE`, rule.AliasEmail, rule.DestinationEmail, rule.Username, ``)
+	if err != nil {
+		fmt.Println(err)
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
 	err = repository.DeleteRuleByID(ruleID)
 	if err != nil {
 		fmt.Println(err)
