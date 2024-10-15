@@ -2,6 +2,7 @@ package destinations
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -46,6 +47,7 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 
 	destinationResponse, err := requests.DestinationRequest(`POST`, domain, destinationEmail, ``)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Error creating destination", http.StatusInternalServerError)
 		return
 	}
@@ -61,6 +63,7 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 
 	newDestination, err := repository.CreateDestination(newDest)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Error creating destination", http.StatusInternalServerError)
 		return
 	}

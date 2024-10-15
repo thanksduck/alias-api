@@ -2,6 +2,7 @@ package rules
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -20,6 +21,7 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -53,6 +55,7 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 
 	savedDestination, err := repository.FindDestinationByEmailAndUsername(destination, user.Username)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Destination not found", http.StatusNotFound)
 		return
 	}
@@ -72,11 +75,13 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 	err = requests.CreateRuleRequest(`POST`, newRule.AliasEmail, newRule.DestinationEmail, newRule.Username, domain)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 	_, err = repository.CreateNewRule(newRule)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}

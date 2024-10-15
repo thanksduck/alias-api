@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"net/http"
 
 	"strconv"
@@ -18,12 +19,14 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 	ruleIDStr := r.PathValue("id")
 	ruleIDInt, err := strconv.Atoi(ruleIDStr)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Invalid rule ID", http.StatusBadRequest)
 		return
 	}
 	ruleID := uint32(ruleIDInt)
 	rule, err := repository.FindRuleByID(ruleID)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Rule not found", http.StatusNotFound)
 		return
 	}
@@ -33,6 +36,7 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 	}
 	err = repository.DeleteRuleByID(ruleID)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
