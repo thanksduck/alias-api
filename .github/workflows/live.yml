@@ -1,0 +1,26 @@
+name: Live
+
+# Trigger Points
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@master
+
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSHKEY }}
+          envs: SECRET_PATH
+          script: |
+            echo "Login To Machine Was SuccessFull"
+            cd ~/server/mail/ && sh ./.scripts/deploy.sh
