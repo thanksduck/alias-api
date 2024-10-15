@@ -23,4 +23,4 @@ jobs:
           envs: SECRET_PATH
           script: |
             echo "Login To Machine Was SuccessFull"
-            cd ~/server/mail/ && sh ./.scripts/deploy.sh
+            cd ~/server/alias-api/ && sh ./.scripts/deploy.sh
