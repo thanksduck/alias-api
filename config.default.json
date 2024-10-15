@@ -1,0 +1,14 @@
+{
+    "domain1.com": {
+      "AccountID": "accountId1",
+      "APIKey": "apiKey1",
+      "ZoneID": "zoneId1",
+      "Email": "email1@example.com"
+    },
+    "domain2.com": {
+      "AccountID": "accountId2",
+      "APIKey": "apiKey2",
+      "ZoneID": "zoneId2",
+      "Email": "email2@example.com"
+    }
+  }

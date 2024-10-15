@@ -1,0 +1,72 @@
+-- Create users table
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(15) UNIQUE NOT NULL CHECK (username ~ '^[a-z][a-z0-9\-_\.]{3,}$'),
+    name VARCHAR(64) NOT NULL CHECK (LENGTH(name) >= 4),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    alias_count INTEGER DEFAULT 0,
+    destination_count INTEGER DEFAULT 0,
+    is_premium BOOLEAN DEFAULT FALSE,
+    password VARCHAR(255) NOT NULL,
+    provider VARCHAR(255),
+    avatar VARCHAR(500),
+    password_changed_at TIMESTAMP,
+    password_reset_token VARCHAR(255),
+    password_reset_expires TIMESTAMP,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_username ON users (username);
+CREATE INDEX idx_email ON users (email);
+
+-- Create rules table
+CREATE TABLE rules (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    username VARCHAR(15) REFERENCES users(username),
+    alias_email VARCHAR(255) NOT NULL UNIQUE,
+    destination_email VARCHAR(255) NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    comment VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_rules_user_id ON rules (user_id);
+CREATE INDEX idx_rules_username ON rules (username);
+CREATE INDEX idx_alias_email ON rules (alias_email);
+
+-- Create destinations table
+CREATE TABLE destinations (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    username VARCHAR(15) REFERENCES users(username),
+    destination_email VARCHAR(255) NOT NULL UNIQUE,
+    domain VARCHAR(255) NOT NULL,
+    cloudflare_destination_id VARCHAR(255) NOT NULL UNIQUE,
+    verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_destinations_user_id ON destinations (user_id);
+CREATE INDEX idx_destinations_username ON destinations (username);
+CREATE INDEX idx_destination_email ON destinations (destination_email);
+CREATE INDEX idx_domain ON destinations (domain);
+
+-- Create social_profiles table
+CREATE TABLE social_profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE REFERENCES users(id),
+    username VARCHAR(15) REFERENCES users(username),
+    github VARCHAR(255),
+    google VARCHAR(255),
+    facebook VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_social_profiles_user_id ON social_profiles (user_id);
+CREATE INDEX idx_social_profiles_username ON social_profiles (username);
