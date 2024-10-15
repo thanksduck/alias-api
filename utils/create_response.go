@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"time"
 )
 
 var bufferPool = sync.Pool{
@@ -73,9 +74,10 @@ func CreateSendResponse(w http.ResponseWriter, data interface{}, message string,
 	// Set headers and cookies
 	w.Header().Set("Content-Type", "application/json")
 	http.SetCookie(w, &http.Cookie{
-		Name:  "token",
-		Value: token,
-		Path:  "/",
+		Name:    "token",
+		Value:   token,
+		Path:    "/",
+		Expires: time.Now().Add(1 * time.Hour),
 	})
 
 	// Write status code and body
