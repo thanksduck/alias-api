@@ -2,3 +2,5 @@
 .DS_Store
 config.json
 Dockerfile
+buil/
+nodemon.json

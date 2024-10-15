@@ -17,7 +17,7 @@ var (
 )
 
 func initializeRuleConfig() {
-	ruleURL = os.Getenv("RULE_URL")
+	ruleURL = os.Getenv("RULE_URL_PREFIX") + "/rules"
 	ruleAPIKey = os.Getenv("RULE_API_KEY")
 }
 
@@ -49,7 +49,6 @@ func CreateRuleRequest(method, alias, destination, username, domain string) erro
 	default:
 		url = fmt.Sprintf("%s/%s/%s", ruleURL, domain, alias)
 	}
-
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("error marshaling data: %v", err)
