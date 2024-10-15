@@ -25,7 +25,7 @@ type User struct {
 
 func (u *User) IsPasswordChangedAfter(unixTime int64) bool {
 	if u.PasswordChangedAt.IsZero() {
-		return true
+		return false
 	}
 	// Adjust for the timezone offset of 5 hours and 30 minutes (19800 seconds)
 	passwordChangedAtUnix := u.PasswordChangedAt.Unix() - 19800
