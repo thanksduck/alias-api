@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/jackc/pgx/v5"
 	models "github.com/thanksduck/alias-api/Models"
 	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
@@ -58,7 +59,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	email := userInfo["email"].(string)
 	existingUser, err := repository.FindUserByUsernameOrEmail("", email)
-	if err != nil {
+	if err != pgx.ErrNoRows {
 		fmt.Println("Error finding user:", err)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
@@ -91,7 +92,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	socialProfile, err := repository.FindSocialProfileByIDOrUsername(user.ID, user.Username)
-	if err != nil {
+	if err != pgx.ErrNoRows {
 		fmt.Println("Error finding social profile:", err)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
