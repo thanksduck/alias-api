@@ -146,8 +146,8 @@ func DeletePasswordResetToken(id uint32) error {
 func UpdateUser(id uint32, user *models.User) (*models.User, error) {
 	pool := db.GetPool()
 	_, err := pool.Exec(context.Background(),
-		`UPDATE users SET name = $1, email = $2, avatar = $3, username = $4, WHERE id = $5`,
-		user.Name, user.Email, user.Avatar, user.Username, id)
+		`UPDATE users SET name = $1, email = $2, avatar = $3, username = $4, provider = $5, email_verified = $6 WHERE id = $7`,
+		user.Name, user.Email, user.Avatar, user.Username, user.Provider, user.EmailVerified, id)
 	if err != nil {
 		return nil, fmt.Errorf("error updating user: %w", err)
 	}

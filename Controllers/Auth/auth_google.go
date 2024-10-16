@@ -21,8 +21,9 @@ var (
 )
 
 func init() {
+	RdUrl := os.Getenv("REDIRECT_HOST") + "/api/v2/auth/google/cb"
 	GoogleOauthConfig = &oauth2.Config{
-		RedirectURL:  "/api/v2/auth/google/cb",
+		RedirectURL:  RdUrl,
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
@@ -31,62 +32,87 @@ func init() {
 }
 
 func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
-
 	if GoogleOauthConfig.ClientID == "" || GoogleOauthConfig.ClientSecret == "" {
+		GoogleOauthConfig.RedirectURL = os.Getenv("REDIRECT_HOST") + "/api/v2/auth/google/cb"
 		GoogleOauthConfig.ClientID = os.Getenv("GOOGLE_CLIENT_ID")
 		GoogleOauthConfig.ClientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
 	}
 	url := GoogleOauthConfig.AuthCodeURL(OauthStateString)
-
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 
 func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	content, err := GetUserInfo(r.FormValue("state"), r.FormValue("code"))
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Error getting user info:", err)
 		http.Redirect(w, r, "/health", http.StatusTemporaryRedirect)
 		return
 	}
 
 	var userInfo map[string]interface{}
-	json.Unmarshal(content, &userInfo)
-
-	// Create or update user
-	user := models.User{
-		Email:         userInfo["email"].(string),
-		Name:          userInfo["name"].(string),
-		EmailVerified: true,
-		Provider:      "google",
-		Avatar:        userInfo["picture"].(string),
+	if err := json.Unmarshal(content, &userInfo); err != nil {
+		fmt.Println("Error unmarshalling user info:", err)
+		http.Redirect(w, r, "/health", http.StatusTemporaryRedirect)
+		return
 	}
 
-	// Assuming you have a function to create or update the user
-	createdUser, err := repository.CreateOrUpdateUser(&user)
+	email := userInfo["email"].(string)
+	existingUser, err := repository.FindUserByUsernameOrEmail("", email)
 	if err != nil {
-		fmt.Println("Error creating/updating user:", err)
+		fmt.Println("Error finding user:", err)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
 
-	// Create or update social profile
-	socialProfile := models.SocialProfile{
-		UserID:   createdUser.ID,
-		Username: createdUser.Username,
-		Google:   userInfo["sub"].(string), // Using 'sub' as unique Google identifier
+	var user *models.User
+	if existingUser != nil {
+		user = existingUser
+		user.EmailVerified = true
+		user.Avatar = userInfo["picture"].(string)
+		if user.Provider != "google" {
+			user.Provider = "google"
+		}
+		_, err = repository.UpdateUser(user.ID, user)
+	} else {
+		user = &models.User{
+			Email:         email,
+			Name:          userInfo["name"].(string),
+			EmailVerified: true,
+			Provider:      "google",
+			Avatar:        userInfo["picture"].(string),
+		}
+		user, err = repository.CreateOrUpdateUser(user)
 	}
 
-	// Assuming you have a function to create or update the social profile
-	_, err = repository.CreateOrUpdateSocialProfile(&socialProfile)
 	if err != nil {
-		fmt.Println("Error creating/updating social profile:", err)
+		fmt.Println("Error updating/creating user:", err)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
 
-	// Redirect to the final destination
-	// http.Redirect(w, r, "/send/to", http.StatusTemporaryRedirect)
-	utils.CreateSendResponse(w, createdUser, "Login Successful", http.StatusOK, "user", createdUser.ID)
+	socialProfile, err := repository.FindSocialProfileByIDOrUsername(user.ID, user.Username)
+	if err != nil {
+		fmt.Println("Error finding social profile:", err)
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return
+	}
+
+	if socialProfile == nil {
+		socialProfile = &models.SocialProfile{
+			UserID:   user.ID,
+			Username: user.Username,
+		}
+	}
+	socialProfile.Google = userInfo["sub"].(string)
+
+	_, err = repository.CreateOrUpdateSocialProfile(socialProfile)
+	if err != nil {
+		fmt.Println("Error updating social profile:", err)
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return
+	}
+
+	RedirectToFrontend(w, r, user)
 }
 
 func GetUserInfo(state string, code string) ([]byte, error) {
@@ -111,4 +137,22 @@ func GetUserInfo(state string, code string) ([]byte, error) {
 	}
 
 	return contents, nil
+}
+
+func RedirectToFrontend(w http.ResponseWriter, r *http.Request, user *models.User) {
+	// Create a token or session for the user here if needed
+	// For example:
+	// token, err := utils.CreateJWTToken(user)
+	// if err != nil {
+	//     http.Error(w, "Error creating token", http.StatusInternalServerError)
+	//     return
+	// }
+
+	// Redirect to frontend with token or user info
+	// frontendURL := os.Getenv("FRONTEND_URL")
+	// You might want to append user info or token to the URL
+	// frontendURL += "?token=" + token
+
+	utils.CreateSendResponse(w, user, "Login Successful", http.StatusOK, "user", user.ID)
+	// http.Redirect(w, r, frontendURL, http.StatusTemporaryRedirect)
 }

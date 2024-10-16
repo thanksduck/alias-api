@@ -42,3 +42,28 @@ func CreateOrUpdateSocialProfile(socialProfile *models.SocialProfile) (*models.S
 
 	return socialProfile, nil
 }
+
+func FindSocialProfileByIDOrUsername(userID uint32, username string) (*models.SocialProfile, error) {
+	pool := db.GetPool()
+	var socialProfile models.SocialProfile
+
+	var query string
+	var args []interface{}
+	if userID != 0 {
+		query = `SELECT id, user_id, username, google, facebook, github, created_at, updated_at
+				 FROM social_profiles WHERE user_id = $1`
+		args = []interface{}{userID}
+	} else {
+		query = `SELECT id, user_id, username, google, facebook, github, created_at, updated_at
+				 FROM social_profiles WHERE username = $1`
+		args = []interface{}{username}
+	}
+
+	err := pool.QueryRow(context.Background(), query, args...).Scan(
+		&socialProfile.ID, &socialProfile.UserID, &socialProfile.Username, &socialProfile.Google, &socialProfile.Facebook, &socialProfile.Github, &socialProfile.CreatedAt, &socialProfile.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &socialProfile, nil
+}
