@@ -106,6 +106,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 			EmailVerified: true,
 			Provider:      "google",
 			Avatar:        getStringValue(userInfo, "picture", ""),
+			Password:      " ",
 		}
 		user, err = repository.CreateOrUpdateUser(user)
 		if err != nil {
