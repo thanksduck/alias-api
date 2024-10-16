@@ -43,6 +43,16 @@ func Login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if user.Provider == "google" {
+			utils.SendErrorResponse(w, "Please login with Google", http.StatusUnauthorized)
+			return
+		}
+
+		if user.Provider == "github" {
+			utils.SendErrorResponse(w, "Please login with Github", http.StatusUnauthorized)
+			return
+		}
+
 		// check password
 		if !utils.CheckPassword(requestData.Password, user.Password) {
 			utils.SendErrorResponse(w, "Username or Password is invalid", http.StatusUnauthorized)

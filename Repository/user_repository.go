@@ -26,6 +26,20 @@ func CreateUser(user *models.User) (*models.User, error) {
 	return user, nil
 }
 
+func CreateOrUpdateUser(user *models.User) (*models.User, error) {
+	pool := db.GetPool()
+	err := pool.QueryRow(context.Background(),
+		`INSERT INTO users (email, name, email_verified, provider, avatar, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (email) DO UPDATE SET avatar = $5, updated_at = $7 RETURNING id, username, name, email, alias_count, destination_count, provider, avatar`,
+		user.Email, user.Name, user.EmailVerified, user.Provider, user.Avatar, time.Now(), time.Now()).Scan(
+		&user.ID, &user.Username, &user.Name, &user.Email, &user.AliasCount,
+		&user.DestinationCount, &user.Provider, &user.Avatar)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 func FindUserByID(id uint32) (*models.User, error) {
 	pool := db.GetPool()
 	var user models.User
