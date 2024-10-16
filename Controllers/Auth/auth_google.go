@@ -82,6 +82,16 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		}
 		_, err = repository.UpdateUser(user.ID, user)
 	} else {
+		username := strings.Split(email, "@")[0]
+		usernameExists, err := repository.FindUserByUsernameOrEmail(username, "")
+		if err != nil && err != pgx.ErrNoRows {
+			fmt.Println("Error finding user by username:", err)
+			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			return
+		}
+		if usernameExists != nil {
+			username = username + "1"
+		}
 		name := getStringValue(userInfo, "name", "Google User")
 		if name == "Google User" {
 			nameParts := strings.Split(email, "@")
@@ -92,12 +102,17 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		user = &models.User{
 			Email:         email,
 			Name:          name,
-			Username:      email,
+			Username:      username,
 			EmailVerified: true,
 			Provider:      "google",
 			Avatar:        getStringValue(userInfo, "picture", ""),
 		}
 		user, err = repository.CreateOrUpdateUser(user)
+		if err != nil {
+			fmt.Println("Error creating/updating user:", err)
+			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			return
+		}
 	}
 
 	if err != nil {
