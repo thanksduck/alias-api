@@ -92,9 +92,6 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		if usernameExists != nil {
 			username = username + "1"
 		}
-		if username == "" {
-			username = "googleuser"
-		}
 		name := getStringValue(userInfo, "name", "Google User")
 		if name == "Google User" {
 			nameParts := strings.Split(email, "@")
