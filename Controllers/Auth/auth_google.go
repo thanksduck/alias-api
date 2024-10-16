@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	models "github.com/thanksduck/alias-api/Models"
@@ -57,9 +58,15 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	email := userInfo["email"].(string)
+	email, ok := userInfo["email"].(string)
+	if !ok || email == "" {
+		fmt.Println("Error: Email not found or empty")
+		http.Redirect(w, r, "/health", http.StatusTemporaryRedirect)
+		return
+	}
+
 	existingUser, err := repository.FindUserByUsernameOrEmail("", email)
-	if err != pgx.ErrNoRows {
+	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error finding user:", err)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
@@ -69,18 +76,25 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if existingUser != nil {
 		user = existingUser
 		user.EmailVerified = true
-		user.Avatar = userInfo["picture"].(string)
+		user.Avatar = getStringValue(userInfo, "picture", "")
 		if user.Provider != "google" {
 			user.Provider = "google"
 		}
 		_, err = repository.UpdateUser(user.ID, user)
 	} else {
+		name := getStringValue(userInfo, "name", "Google User")
+		if name == "Google User" {
+			nameParts := strings.Split(email, "@")
+			if len(nameParts) > 0 {
+				name = nameParts[0]
+			}
+		}
 		user = &models.User{
 			Email:         email,
-			Name:          userInfo["name"].(string),
+			Name:          name,
 			EmailVerified: true,
 			Provider:      "google",
-			Avatar:        userInfo["picture"].(string),
+			Avatar:        getStringValue(userInfo, "picture", ""),
 		}
 		user, err = repository.CreateOrUpdateUser(user)
 	}
@@ -92,7 +106,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	socialProfile, err := repository.FindSocialProfileByIDOrUsername(user.ID, user.Username)
-	if err != pgx.ErrNoRows {
+	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error finding social profile:", err)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
@@ -104,7 +118,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 			Username: user.Username,
 		}
 	}
-	socialProfile.Google = userInfo["sub"].(string)
+	socialProfile.Google = getStringValue(userInfo, "sub", "")
 
 	_, err = repository.CreateOrUpdateSocialProfile(socialProfile)
 	if err != nil {
@@ -114,6 +128,14 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RedirectToFrontend(w, r, user)
+}
+
+// Helper function to safely get string values from the map
+func getStringValue(m map[string]interface{}, key, defaultValue string) string {
+	if val, ok := m[key].(string); ok && val != "" {
+		return val
+	}
+	return defaultValue
 }
 
 func GetUserInfo(state string, code string) ([]byte, error) {
