@@ -138,7 +138,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	socialProfile.Google = getStringValue(userInfo, "sub", "")
 
 	_, err = repository.CreateOrUpdateSocialProfile(socialProfile)
-	if err != nil {
+	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error updating social profile:", err)
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
