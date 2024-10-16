@@ -32,6 +32,10 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "User not found", http.StatusNotFound)
 		return
 	}
+	if !user.EmailVerified {
+		utils.SendErrorResponse(w, "Email not verified", http.StatusUnauthorized)
+		return
+	}
 	token, err := utils.GeneratePasswordResetToken(user.ID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Error generating Reset Link", http.StatusInternalServerError)

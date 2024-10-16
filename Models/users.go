@@ -9,6 +9,7 @@ type User struct {
 	Username             string    `json:"username,omitempty"`
 	Name                 string    `json:"name,omitempty"`
 	Email                string    `json:"email,omitempty"`
+	EmailVerified        bool      `json:"emailVerified"`
 	AliasCount           int       `json:"aliasCount"`
 	DestinationCount     int       `json:"destinationCount"`
 	IsPremium            bool      `json:"-"`

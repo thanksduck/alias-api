@@ -19,6 +19,10 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
 	}
+	if !user.EmailVerified {
+		utils.SendErrorResponse(w, "Please Verify Your Email to add Destination", http.StatusUnauthorized)
+		return
+	}
 	if user.DestinationCount == 1 && !user.IsPremium {
 		utils.SendErrorResponse(w, "You have Reached the Destination Limit", http.StatusPaymentRequired)
 		return

@@ -4,6 +4,7 @@ CREATE TABLE users (
     username VARCHAR(15) UNIQUE NOT NULL CHECK (username ~ '^[a-z][a-z0-9\-_\.]{3,}$'),
     name VARCHAR(64) NOT NULL CHECK (LENGTH(name) >= 4),
     email VARCHAR(255) UNIQUE NOT NULL,
+    email_verified BOOLEAN DEFAULT FALSE,
     alias_count INTEGER DEFAULT 0,
     destination_count INTEGER DEFAULT 0,
     is_premium BOOLEAN DEFAULT FALSE,

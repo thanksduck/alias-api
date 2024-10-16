@@ -33,11 +33,11 @@ func FindUserByID(id uint32) (*models.User, error) {
 
 	err := pool.QueryRow(context.Background(),
 		`SELECT id, username, name, email, alias_count, destination_count, is_premium,
-         provider, avatar, password_changed_at, active, password
+         provider, avatar, password_changed_at, active, password, email_verified
          FROM users WHERE id = $1`, id).Scan(
 		&user.ID, &user.Username, &user.Name, &user.Email, &user.AliasCount,
 		&user.DestinationCount, &user.IsPremium, &user.Provider, &user.Avatar,
-		&passwordChangedAt, &user.Active, &user.Password)
+		&passwordChangedAt, &user.Active, &user.Password, &user.EmailVerified)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -62,11 +62,11 @@ func FindUserByUsernameOrEmail(username string, email string) (*models.User, err
 
 	err := pool.QueryRow(context.Background(),
 		`SELECT id, username, name, email, alias_count, destination_count, is_premium,
-         provider, avatar, password_changed_at, active, password
+         provider, avatar, password_changed_at, active, password, email_verified
          FROM users WHERE username = $1 OR email = $2`, username, email).Scan(
 		&user.ID, &user.Username, &user.Name, &user.Email, &user.AliasCount,
 		&user.DestinationCount, &user.IsPremium, &user.Provider, &user.Avatar,
-		&passwordChangedAt, &user.Active, &user.Password)
+		&passwordChangedAt, &user.Active, &user.Password, &user.EmailVerified)
 	if err != nil {
 		return nil, err
 	}
@@ -147,6 +147,26 @@ func DeleteUser(id uint32) error {
 		`DELETE FROM users WHERE id = $1`, id)
 	if err != nil {
 		return fmt.Errorf("error deleting user: %w", err)
+	}
+	return nil
+}
+
+func VerifyEmailByID(id uint32) error {
+	pool := db.GetPool()
+	_, err := pool.Exec(context.Background(),
+		`UPDATE users SET email_verified = true WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("error verifying email: %w", err)
+	}
+	return nil
+}
+
+func UpdateProviderByID(id uint32, provider string) error {
+	pool := db.GetPool()
+	_, err := pool.Exec(context.Background(),
+		`UPDATE users SET provider = $1 WHERE id = $2`, provider, id)
+	if err != nil {
+		return fmt.Errorf("error updating provider: %w", err)
 	}
 	return nil
 }

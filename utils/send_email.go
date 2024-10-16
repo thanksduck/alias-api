@@ -24,3 +24,25 @@ func SendEmail(to string, subject string, body string) error {
 	}
 	return nil
 }
+
+/*
+
+func SendEmailAsync(to, subject, body string) chan error {
+	resultChan := make(chan error, 1)
+	go func() {
+		from := os.Getenv("EMAIL_FROM")
+		username := os.Getenv("EMAIL_USERNAME")
+		password := os.Getenv("EMAIL_PASSWORD")
+		smtpHost := os.Getenv("SMTP_HOST")
+		smtpPort := os.Getenv("SMTP_PORT")
+		msg := "From: " + from + "\n" +
+			"To: " + to + "\n" +
+			"Subject: " + subject + "\n\n" +
+			body
+		auth := smtp.PlainAuth("", username, password, smtpHost)
+		err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, []string{to}, []byte(msg))
+		resultChan <- err
+	}()
+	return resultChan
+}
+*/
