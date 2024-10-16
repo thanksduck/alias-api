@@ -92,6 +92,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		user = &models.User{
 			Email:         email,
 			Name:          name,
+			Username:      email,
 			EmailVerified: true,
 			Provider:      "google",
 			Avatar:        getStringValue(userInfo, "picture", ""),
