@@ -55,6 +55,12 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Error creating destination", http.StatusInternalServerError)
 		return
 	}
+	var verificationCheck bool
+	if destinationResponse.Result.Verified.IsZero() {
+		verificationCheck = false
+	} else {
+		verificationCheck = true
+	}
 
 	newDest := &models.Destination{
 		Username:                user.Username,
@@ -62,7 +68,7 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		DestinationEmail:        destinationEmail,
 		Domain:                  domain,
 		CloudflareDestinationID: destinationResponse.Result.ID,
-		Verified:                false,
+		Verified:                verificationCheck,
 	}
 
 	newDestination, err := repository.CreateDestination(newDest)
