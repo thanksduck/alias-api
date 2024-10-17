@@ -4,3 +4,4 @@ config.json
 Dockerfile
 buil/
 nodemon.json
+test.json

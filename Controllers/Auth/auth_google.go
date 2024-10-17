@@ -20,6 +20,7 @@ import (
 
 var (
 	GoogleOauthConfig *oauth2.Config
+	GithubOauthConfig *oauth2.Config
 	OauthStateString  = "random"
 )
 

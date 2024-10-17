@@ -47,6 +47,11 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Destination Cant be Proccessed", http.StatusUnprocessableEntity)
 		return
 	}
+	if !user.IsPremium && destinationEmail != user.Email {
+		utils.SendErrorResponse(w, "Destination Email should be same", http.StatusUnprocessableEntity)
+		return
+	}
+
 	domain := strings.ToLower(requestBody.Domain)
 
 	destinationResponse, err := requests.DestinationRequest(`POST`, domain, destinationEmail, ``)
