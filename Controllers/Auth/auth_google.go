@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 
@@ -47,28 +48,28 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	content, err := GetUserInfo(r.FormValue("state"), r.FormValue("code"))
 	if err != nil {
 		fmt.Println("Error getting user info:", err)
-		http.Redirect(w, r, "/health", http.StatusTemporaryRedirect)
+		utils.SendErrorResponse(w, "Error getting user info", http.StatusInternalServerError)
 		return
 	}
 
 	var userInfo map[string]interface{}
 	if err := json.Unmarshal(content, &userInfo); err != nil {
 		fmt.Println("Error unmarshalling user info:", err)
-		http.Redirect(w, r, "/health", http.StatusTemporaryRedirect)
+		utils.SendErrorResponse(w, "Error unmarshalling user info", http.StatusInternalServerError)
 		return
 	}
 
 	email, ok := userInfo["email"].(string)
 	if !ok || email == "" {
 		fmt.Println("Error: Email not found or empty")
-		http.Redirect(w, r, "/health", http.StatusTemporaryRedirect)
+		utils.SendErrorResponse(w, "Email not found or empty", http.StatusBadRequest)
 		return
 	}
 
 	existingUser, err := repository.FindUserByUsernameOrEmail("", email)
 	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error finding user:", err)
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		utils.SendErrorResponse(w, "Error finding user", http.StatusInternalServerError)
 		return
 	}
 
@@ -86,7 +87,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		usernameExists, err := repository.FindUserByUsernameOrEmail(username, "")
 		if err != nil && err != pgx.ErrNoRows {
 			fmt.Println("Error finding user by username:", err)
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			utils.SendErrorResponse(w, "Error finding user by username", http.StatusInternalServerError)
 			return
 		}
 		if usernameExists != nil {
@@ -109,23 +110,23 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 			Password:      " ",
 		}
 		user, err = repository.CreateOrUpdateUser(user)
-		if err != nil {
+		if err != nil && err != pgx.ErrNoRows {
 			fmt.Println("Error creating/updating user:", err)
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+			utils.SendErrorResponse(w, "Error creating/updating user", http.StatusInternalServerError)
 			return
 		}
 	}
 
-	if err != nil {
+	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error updating/creating user:", err)
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		utils.SendErrorResponse(w, "Error updating/creating user", http.StatusInternalServerError)
 		return
 	}
 
 	socialProfile, err := repository.FindSocialProfileByIDOrUsername(user.ID, user.Username)
 	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error finding social profile:", err)
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		utils.SendErrorResponse(w, "Error finding social profile", http.StatusInternalServerError)
 		return
 	}
 
@@ -140,7 +141,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	_, err = repository.CreateOrUpdateSocialProfile(socialProfile)
 	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error updating social profile:", err)
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		utils.SendErrorResponse(w, "Error updating social profile", http.StatusInternalServerError)
 		return
 	}
 
@@ -181,18 +182,17 @@ func GetUserInfo(state string, code string) ([]byte, error) {
 
 func RedirectToFrontend(w http.ResponseWriter, r *http.Request, user *models.User) {
 	// Create a token or session for the user here if needed
-	// For example:
-	// token, err := utils.CreateJWTToken(user)
-	// if err != nil {
-	//     http.Error(w, "Error creating token", http.StatusInternalServerError)
-	//     return
-	// }
+	token, err := utils.GenerateToken(user.ID)
+	if err != nil {
+		http.Error(w, "Error creating token", http.StatusInternalServerError)
+		return
+	}
 
-	// Redirect to frontend with token or user info
-	// frontendURL := os.Getenv("FRONTEND_URL")
-	// You might want to append user info or token to the URL
-	// frontendURL += "?token=" + token
+	// Encode the URL
+	frontendURL := os.Getenv("FRONTEND_URL")
+	redirectURL := fmt.Sprintf("%s?token=%s", frontendURL, url.QueryEscape(token))
 
-	utils.CreateSendResponse(w, user, "Login Successful", http.StatusOK, "user", user.ID)
-	// http.Redirect(w, r, frontendURL, http.StatusTemporaryRedirect)
+	// Redirect to frontend with encoded URL
+	// http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+	utils.CreateSendResponse(w, user, redirectURL, http.StatusOK, "user", user.ID)
 }
