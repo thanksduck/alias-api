@@ -73,10 +73,7 @@ func FindRuleByAliasEmail(aliasEmail string) (*models.Rule, error) {
 		`SELECT id, user_id, username, alias_email, destination_email, active, comment FROM rules WHERE alias_email = $1`, aliasEmail).Scan(
 		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment)
 	if err != nil {
-		if err == pgx.ErrNoRows {
-			return nil, fmt.Errorf("rule with alias email %s not found", aliasEmail)
-		}
-		return nil, fmt.Errorf("error querying rule: %w", err)
+		return nil, err
 	}
 	return &rule, nil
 }
