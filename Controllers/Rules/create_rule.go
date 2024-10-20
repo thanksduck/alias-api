@@ -67,10 +67,13 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 	existingRule, err := repository.FindRuleByAliasEmail(alias)
 	if err != nil && err != pgx.ErrNoRows {
+		fmt.Println(err)
+		print(err)
 		utils.SendErrorResponse(w, "Error checking Alias Existence", http.StatusInternalServerError)
 		return
 	}
 	if existingRule != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Alias Already Exists", http.StatusConflict)
 		return
 	}
