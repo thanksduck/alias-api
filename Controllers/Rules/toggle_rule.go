@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	repository "github.com/thanksduck/alias-api/Repository"
 	requests "github.com/thanksduck/alias-api/Requests"
@@ -35,7 +36,8 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, ``)
+	domain := strings.Split(rule.AliasEmail, "@")[1]
+	err = requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)

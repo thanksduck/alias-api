@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"strconv"
 
@@ -36,7 +37,8 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = requests.CreateRuleRequest(`DELETE`, rule.AliasEmail, rule.DestinationEmail, rule.Username, ``)
+	domain := strings.Split(rule.AliasEmail, "@")[1]
+	err = requests.CreateRuleRequest(`DELETE`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
