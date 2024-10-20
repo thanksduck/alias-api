@@ -65,12 +65,13 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You are not allowed Create rule for this domain", http.StatusForbidden)
 		return
 	}
-	_, err = repository.FindRuleByAliasEmail(alias)
-	if err == nil {
-		utils.SendErrorResponse(w, "Alias Already Exist my friend", http.StatusConflict)
+	existingRule, err := repository.FindRuleByAliasEmail(alias)
+	if err != nil && err != pgx.ErrNoRows {
+		utils.SendErrorResponse(w, "Error checking Alias Existence", http.StatusInternalServerError)
 		return
-	} else if err != pgx.ErrNoRows {
-		utils.SendErrorResponse(w, "Error checking Alias Existance", http.StatusInternalServerError)
+	}
+	if existingRule != nil {
+		utils.SendErrorResponse(w, "Alias Already Exists", http.StatusConflict)
 		return
 	}
 
