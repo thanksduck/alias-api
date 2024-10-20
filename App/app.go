@@ -12,13 +12,14 @@ import (
 func Init() http.Handler {
 	fmt.Println("Making the Application")
 	mux := http.NewServeMux()
-	mux.HandleFunc(`GET /health`, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(`GET /api/v2/health`, func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `I'm Healthy Boi`)
 	})
 	routes.AuthRouter(mux)
 	routes.UserRouter(mux)
 	routes.RuleRouter(mux)
 	routes.DestinationRouter(mux)
+	routes.PremiumRouter(mux)
 
 	return RequestLoggerMiddleware(mux)
 }

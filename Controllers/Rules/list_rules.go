@@ -19,7 +19,7 @@ func ListRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rules, err := repository.FindRulesByUsername(user.Username)
+	rules, err := repository.FindRulesByUserID(user.ID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return

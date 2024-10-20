@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	models "github.com/thanksduck/alias-api/Models"
 	repository "github.com/thanksduck/alias-api/Repository"
@@ -62,6 +63,14 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 
 	if savedDestination.Domain != domain {
 		utils.SendErrorResponse(w, "You are not allowed Create rule for this domain", http.StatusForbidden)
+		return
+	}
+	_, err = repository.FindRuleByAliasEmail(alias)
+	if err == nil {
+		utils.SendErrorResponse(w, "Alias Already Exist my friend", http.StatusConflict)
+		return
+	} else if err != pgx.ErrNoRows {
+		utils.SendErrorResponse(w, "Error checking Alias Existance", http.StatusInternalServerError)
 		return
 	}
 

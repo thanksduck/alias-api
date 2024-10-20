@@ -71,3 +71,28 @@ CREATE TABLE social_profiles (
 
 CREATE INDEX idx_social_profiles_user_id ON social_profiles (user_id);
 CREATE INDEX idx_social_profiles_username ON social_profiles (username);
+
+CREATE TABLE custom_domains (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    username VARCHAR(15) REFERENCES users(username),
+    domain VARCHAR(255) NOT NULL UNIQUE
+)
+
+CREATE INDEX idx_custom_domains_user_id ON custom_domains (user_id);
+CREATE INDEX idx_custom_domains_username ON custom_domains (username);
+
+CREATE TABLE custom_domains_dns_records (
+    id SERIAL PRIMARY KEY,
+    custom_domain_id INTEGER REFERENCES custom_domains(id),
+    cloudflare_id VARCHAR(50) NOT NULL UNIQUE,
+    type VARCHAR(20) NOT NULL,
+    name VARCHAR(20) NOT NULL,
+    content VARCHAR(255) NOT NULL,
+    ttl INTEGER NOT NULL,
+    priority INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_custom_domains_dns_records_custom_domain_id ON custom_domains_dns_records (custom_domain_id);

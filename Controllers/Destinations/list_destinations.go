@@ -18,7 +18,7 @@ func ListDestinations(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You have not created any destinations yet", http.StatusBadRequest)
 		return
 	}
-	destinations, err := repository.FindDestinationsByUsername(user.Username)
+	destinations, err := repository.FindDestinationsByUserID(user.ID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
