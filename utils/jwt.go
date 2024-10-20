@@ -9,7 +9,7 @@ import (
 )
 
 type Claims struct {
-	ID uint32 `json:"id"`
+	Username string `json:"username"`
 	jwt.RegisteredClaims
 }
 
@@ -38,7 +38,7 @@ func VerifyToken(tokenString string) (*Claims, error) {
 }
 
 // GenerateToken generates a new JWT token for the given user ID
-func GenerateToken(id uint32) (string, error) {
+func GenerateToken(username string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", fmt.Errorf("JWT_SECRET environment variable not set")
@@ -51,7 +51,7 @@ func GenerateToken(id uint32) (string, error) {
 
 	now := time.Now()
 	claims := Claims{
-		ID: id,
+		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(expireDuration)),
 			IssuedAt:  jwt.NewNumericDate(now),
@@ -63,7 +63,7 @@ func GenerateToken(id uint32) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
-func GeneratePasswordResetToken(id uint32) (string, error) {
+func GeneratePasswordResetToken(username string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", fmt.Errorf("JWT_SECRET environment variable not set")
@@ -71,7 +71,7 @@ func GeneratePasswordResetToken(id uint32) (string, error) {
 
 	now := time.Now()
 	claims := Claims{
-		ID: id,
+		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(now),

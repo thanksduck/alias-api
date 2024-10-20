@@ -83,5 +83,5 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, newDestination, "Destination Created Successfully", http.StatusCreated, "destination", user.ID)
+	utils.CreateSendResponse(w, newDestination, "Destination Created Successfully", http.StatusCreated, "destination", user.Username)
 }

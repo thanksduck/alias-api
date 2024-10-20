@@ -86,6 +86,6 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, newUser, `User Created Successfully`, http.StatusCreated, `user`, newUser.ID)
+	utils.CreateSendResponse(w, newUser, `User Created Successfully`, http.StatusCreated, `user`, newUser.Username)
 
 }

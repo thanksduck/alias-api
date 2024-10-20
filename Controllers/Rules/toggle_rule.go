@@ -53,5 +53,5 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 
 	rule.Active = !rule.Active
 
-	utils.CreateSendResponse(w, rule, "Rule Toggled Successfully", http.StatusOK, "rule", user.ID)
+	utils.CreateSendResponse(w, rule, "Rule Toggled Successfully", http.StatusOK, "rule", user.Username)
 }

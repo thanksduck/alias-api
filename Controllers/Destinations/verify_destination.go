@@ -33,7 +33,7 @@ func VerifyDestination(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if destination.Verified {
-		utils.CreateSendResponse(w, destination, "Destination already verified", http.StatusOK, "destination", user.ID)
+		utils.CreateSendResponse(w, destination, "Destination already verified", http.StatusOK, "destination", user.Username)
 		return
 	}
 
@@ -59,6 +59,6 @@ func VerifyDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, destination, "Destination Verified Successfully", http.StatusOK, "destination", user.ID)
+	utils.CreateSendResponse(w, destination, "Destination Verified Successfully", http.StatusOK, "destination", user.Username)
 
 }

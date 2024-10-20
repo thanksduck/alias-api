@@ -62,5 +62,5 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, v, "Github Login Successful", http.StatusOK, "user", 1)
+	utils.CreateSendResponse(w, v, "Github Login Successful", http.StatusOK, "user", `1`)
 }

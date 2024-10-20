@@ -45,7 +45,7 @@ type SuccessResponse struct {
 	Data    interface{} `json:"data"`
 }
 
-func CreateSendResponse(w http.ResponseWriter, data interface{}, message string, statusCode int, dataName string, userID uint32) {
+func CreateSendResponse(w http.ResponseWriter, data interface{}, message string, statusCode int, dataName string, username string) {
 	response := SuccessResponse{
 		Status:  "success",
 		Message: message,
@@ -65,7 +65,7 @@ func CreateSendResponse(w http.ResponseWriter, data interface{}, message string,
 	}
 
 	// Generate token
-	token, err := GenerateToken(userID)
+	token, err := GenerateToken(username)
 	if err != nil {
 		SendErrorResponse(w, "Failed to generate token", http.StatusInternalServerError)
 		return

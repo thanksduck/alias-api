@@ -25,7 +25,7 @@ func ListRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, rules, "Rules Retreived Successfully", http.StatusOK, "rules", user.ID)
+	utils.CreateSendResponse(w, rules, "Rules Retreived Successfully", http.StatusOK, "rules", user.Username)
 
 }
 
@@ -51,5 +51,5 @@ func GetRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You are not allowed to view this rule", http.StatusForbidden)
 		return
 	}
-	utils.CreateSendResponse(w, rule, "Rule Retreived Successfully", http.StatusOK, "rule", user.ID)
+	utils.CreateSendResponse(w, rule, "Rule Retreived Successfully", http.StatusOK, "rule", user.Username)
 }

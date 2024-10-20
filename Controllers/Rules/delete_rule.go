@@ -51,5 +51,5 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, nil, "Rule Deleted Successfully", http.StatusNoContent, "rule", user.ID)
+	utils.CreateSendResponse(w, nil, "Rule Deleted Successfully", http.StatusNoContent, "rule", user.Username)
 }

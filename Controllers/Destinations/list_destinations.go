@@ -23,7 +23,7 @@ func ListDestinations(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, destinations, "Destinations Retreived Successfully", http.StatusOK, "destinations", user.ID)
+	utils.CreateSendResponse(w, destinations, "Destinations Retreived Successfully", http.StatusOK, "destinations", user.Username)
 }
 
 func GetDestination(w http.ResponseWriter, r *http.Request) {
@@ -49,5 +49,5 @@ func GetDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You are not allowed to view this destination", http.StatusForbidden)
 		return
 	}
-	utils.CreateSendResponse(w, destination, "Destination Retreived Successfully", http.StatusOK, "destination", user.ID)
+	utils.CreateSendResponse(w, destination, "Destination Retreived Successfully", http.StatusOK, "destination", user.Username)
 }

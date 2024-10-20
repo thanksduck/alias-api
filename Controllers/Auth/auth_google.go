@@ -183,7 +183,7 @@ func GetUserInfo(state string, code string) ([]byte, error) {
 
 func RedirectToFrontend(w http.ResponseWriter, r *http.Request, user *models.User) {
 	// Create a token or session for the user here if needed
-	token, err := utils.GenerateToken(user.ID)
+	token, err := utils.GenerateToken(user.Username)
 	if err != nil {
 		http.Error(w, "Error creating token", http.StatusInternalServerError)
 		return
@@ -195,5 +195,5 @@ func RedirectToFrontend(w http.ResponseWriter, r *http.Request, user *models.Use
 
 	// Redirect to frontend with encoded URL
 	// http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
-	utils.CreateSendResponse(w, user, redirectURL, http.StatusOK, "user", user.ID)
+	utils.CreateSendResponse(w, user, redirectURL, http.StatusOK, "user", user.Username)
 }

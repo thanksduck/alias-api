@@ -70,6 +70,6 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, nil, "Password Reset Successful Please Login", http.StatusOK, "message", 0)
+	utils.CreateSendResponse(w, nil, "Password Reset Successful Please Login", http.StatusOK, "message", `0`)
 
 }

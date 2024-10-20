@@ -26,11 +26,11 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if user.EmailVerified || user.Provider == `localVerified` || user.Provider == `github` || user.Provider == `google` {
-		utils.CreateSendResponse(w, user, "User already verified", http.StatusOK, "user", user.ID)
+		utils.CreateSendResponse(w, user, "User already verified", http.StatusOK, "user", user.Username)
 		return
 	}
 	if user.Provider != `local` {
-		utils.CreateSendResponse(w, user, "Verification email already sent. If you didn't receive your email, check spam or contact support", http.StatusOK, "user", user.ID)
+		utils.CreateSendResponse(w, user, "Verification email already sent. If you didn't receive your email, check spam or contact support", http.StatusOK, "user", user.Username)
 		return
 	}
 
@@ -68,7 +68,7 @@ The One Alias Service Team`, user.Name, verificationLink)
 		utils.SendErrorResponse(w, "Error sending email", http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, user, "Verification email sent, please Check Your Spam as well", http.StatusOK, "user", user.ID)
+	utils.CreateSendResponse(w, user, "Verification email sent, please Check Your Spam as well", http.StatusOK, "user", user.Username)
 }
 
 func VerifyUser(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +104,6 @@ func VerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.EmailVerified = true
-	utils.CreateSendResponse(w, user, "Email verified successfully", http.StatusOK, "user", user.ID)
+	utils.CreateSendResponse(w, user, "Email verified successfully", http.StatusOK, "user", user.Username)
 
 }

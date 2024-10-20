@@ -96,6 +96,6 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, newRule, "Rule Created Successfully", http.StatusCreated, "rule", user.ID)
+	utils.CreateSendResponse(w, newRule, "Rule Created Successfully", http.StatusCreated, "rule", user.Username)
 
 }

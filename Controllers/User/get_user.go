@@ -13,6 +13,6 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, user, "User Retreived Successfully", http.StatusOK, "user", user.ID)
+	utils.CreateSendResponse(w, user, "User Retreived Successfully", http.StatusOK, "user", user.Username)
 
 }

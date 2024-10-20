@@ -70,5 +70,5 @@ func UpdateRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, updatedRule, "Rule Updated Successfully", http.StatusOK, "rule", user.ID)
+	utils.CreateSendResponse(w, updatedRule, "Rule Updated Successfully", http.StatusOK, "rule", user.Username)
 }

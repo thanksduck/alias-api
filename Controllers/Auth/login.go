@@ -60,6 +60,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, user, "Login Successful", http.StatusOK, "user", user.ID)
+	utils.CreateSendResponse(w, user, "Login Successful", http.StatusOK, "user", user.Username)
 
 }

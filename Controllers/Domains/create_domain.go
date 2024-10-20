@@ -89,6 +89,6 @@ func CreateCustomDomain(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	utils.CreateSendResponse(w, customDomain, "Domain Created Successfully", http.StatusCreated, "domain", user.ID)
+	utils.CreateSendResponse(w, customDomain, "Domain Created Successfully", http.StatusCreated, "domain", user.Username)
 
 }

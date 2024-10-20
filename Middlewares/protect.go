@@ -39,8 +39,8 @@ func Protect(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		// Get the user from the database
-		userID := claims.ID
-		user, err := repository.FindUserByID(userID)
+		username := claims.Username
+		user, err := repository.FindUserByUsernameOrEmail(username, ``)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				utils.SendErrorResponse(w, "User not found. Please login again.", http.StatusUnauthorized)

@@ -61,6 +61,6 @@ func UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.CreateSendResponse(w, user, "Password updated successfully", http.StatusOK, "user", user.ID)
+	utils.CreateSendResponse(w, user, "Password updated successfully", http.StatusOK, "user", user.Username)
 
 }

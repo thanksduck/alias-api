@@ -71,5 +71,5 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Failed to update user", http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, updatedUser, "User updated successfully", http.StatusOK, "user", updatedUser.ID)
+	utils.CreateSendResponse(w, updatedUser, "User updated successfully", http.StatusOK, "user", updatedUser.Username)
 }
