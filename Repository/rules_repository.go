@@ -13,8 +13,8 @@ func FindRuleByID(id uint32) (*models.Rule, error) {
 	pool := db.GetPool()
 	var rule models.Rule
 	err := pool.QueryRow(context.Background(),
-		`SELECT id, user_id, username, alias_email, destination_email, active, comment FROM rules WHERE id = $1`, id).Scan(
-		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment)
+		`SELECT id, user_id, username, alias_email, destination_email, active, comment,name FROM rules WHERE id = $1`, id).Scan(
+		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment, &rule.Name)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("rule with id %d not found", id)
@@ -27,7 +27,7 @@ func FindRuleByID(id uint32) (*models.Rule, error) {
 func FindRulesByUserID(userID uint32) ([]models.Rule, error) {
 	pool := db.GetPool()
 	rows, err := pool.Query(context.Background(),
-		`SELECT id, user_id, username, alias_email, destination_email, active, comment FROM rules WHERE user_id = $1`, userID)
+		`SELECT id, user_id, username, alias_email, destination_email, active, comment,name FROM rules WHERE user_id = $1`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("error querying rules: %w", err)
 	}
@@ -36,7 +36,7 @@ func FindRulesByUserID(userID uint32) ([]models.Rule, error) {
 	var rules []models.Rule
 	for rows.Next() {
 		var rule models.Rule
-		err := rows.Scan(&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment)
+		err := rows.Scan(&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment, &rule.Name)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rule: %w", err)
 		}
@@ -48,7 +48,7 @@ func FindRulesByUserID(userID uint32) ([]models.Rule, error) {
 func FindRulesByUsername(username string) ([]models.Rule, error) {
 	pool := db.GetPool()
 	rows, err := pool.Query(context.Background(),
-		`SELECT id, user_id, username, alias_email, destination_email, active, comment FROM rules WHERE username = $1`, username)
+		`SELECT id, user_id, username, alias_email, destination_email, active, comment,name FROM rules WHERE username = $1`, username)
 	if err != nil {
 		return nil, fmt.Errorf("error querying rules: %w", err)
 	}
@@ -57,7 +57,7 @@ func FindRulesByUsername(username string) ([]models.Rule, error) {
 	var rules []models.Rule
 	for rows.Next() {
 		var rule models.Rule
-		err := rows.Scan(&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment)
+		err := rows.Scan(&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment, &rule.Name)
 		if err != nil {
 			return nil, fmt.Errorf("error scanning rule: %w", err)
 		}
@@ -87,10 +87,10 @@ func CreateNewRule(rule *models.Rule) (*models.Rule, error) {
 	defer tx.Rollback(context.Background())
 
 	err = tx.QueryRow(context.Background(),
-		`INSERT INTO rules (user_id, username, alias_email, destination_email, comment)
-		 VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, username, alias_email, destination_email, active, comment`,
-		rule.UserID, rule.Username, rule.AliasEmail, rule.DestinationEmail, rule.Comment).Scan(
-		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment)
+		`INSERT INTO rules (user_id, username, alias_email, destination_email, comment, name)
+		 VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, username, alias_email, destination_email, active, comment, name`,
+		rule.UserID, rule.Username, rule.AliasEmail, rule.DestinationEmail, rule.Comment, rule.Name).Scan(
+		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment, &rule.Name)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -114,9 +114,9 @@ func CreateNewRule(rule *models.Rule) (*models.Rule, error) {
 func UpdateRuleByID(id uint32, rule *models.Rule) (*models.Rule, error) {
 	pool := db.GetPool()
 	err := pool.QueryRow(context.Background(),
-		`UPDATE rules SET alias_email = $1, destination_email = $2, comment = $3 WHERE id = $4 RETURNING id, user_id, username, alias_email, destination_email, active,comment`,
-		rule.AliasEmail, rule.DestinationEmail, rule.Comment, id).Scan(
-		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment)
+		`UPDATE rules SET alias_email = $1, destination_email = $2, comment = $3, name = $4, active = $5 WHERE id = $6 RETURNING id, user_id, username, alias_email, destination_email, active, comment, name`,
+		rule.AliasEmail, rule.DestinationEmail, rule.Comment, rule.Name, rule.Active, id).Scan(
+		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment, &rule.Name)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err

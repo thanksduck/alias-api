@@ -59,6 +59,7 @@ func UpdateRule(w http.ResponseWriter, r *http.Request) {
 	rule.AliasEmail = ruleData.AliasEmail
 	rule.DestinationEmail = ruleData.DestinationEmail
 	rule.Comment = ruleData.Comment
+	rule.Name = ruleData.Name
 	err = requests.CreateRuleRequest(`POST`, rule.AliasEmail, rule.DestinationEmail, rule.Username, strings.Split(rule.AliasEmail, "@")[1])
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)

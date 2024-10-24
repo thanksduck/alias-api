@@ -18,6 +18,8 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 	var requestBody struct {
 		AliasEmail       string `json:"aliasEmail"`
 		DestinationEmail string `json:"destinationEmail"`
+		Name             string `json:"name"`
+		Comment          string `json:"comment"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
@@ -81,7 +83,8 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 		AliasEmail:       alias,
 		DestinationEmail: destination,
 		Active:           true,
-		Comment:          "",
+		Comment:          requestBody.Comment,
+		Name:             requestBody.Name,
 	}
 	err = requests.CreateRuleRequest(`POST`, newRule.AliasEmail, newRule.DestinationEmail, newRule.Username, domain)
 	if err != nil {
