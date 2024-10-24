@@ -12,5 +12,5 @@ type Rule struct {
 	CreatedAt        time.Time `json:"-"`
 	UpdatedAt        time.Time `json:"-"`
 	Comment          string    `json:"comment,omitempty"`
-	Name             string    `json:"name"`
+	Name             string    `json:"name,omitempty"`
 }
