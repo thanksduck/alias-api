@@ -88,7 +88,7 @@ func CreateNewRule(rule *models.Rule) (*models.Rule, error) {
 
 	err = tx.QueryRow(context.Background(),
 		`INSERT INTO rules (user_id, username, alias_email, destination_email, comment, name)
-		 VALUES ($1, $2, $3, $4, $5) RETURNING id, user_id, username, alias_email, destination_email, active, comment, name`,
+		 VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, user_id, username, alias_email, destination_email, active, comment, name`,
 		rule.UserID, rule.Username, rule.AliasEmail, rule.DestinationEmail, rule.Comment, rule.Name).Scan(
 		&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment, &rule.Name)
 	if err != nil {
