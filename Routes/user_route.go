@@ -20,4 +20,5 @@ func UserRouter(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v2/user/{username}/rules", middlewares.Protect(rules.ListRules))
 	mux.HandleFunc("PATCH /api/v2/user/{username}/update-password", middlewares.Protect(user.UpdateUserPassword))
 	mux.HandleFunc("DELETE /api/v2/user/{username}", middlewares.Protect(user.DeleteUser))
+	mux.HandleFunc("POST /api/v2/user/{username}/logout", middlewares.Protect(user.LogoutUser))
 }
