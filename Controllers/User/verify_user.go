@@ -46,7 +46,7 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	verificationLink := fmt.Sprintf("%s://%s/api/v2/user/%s/%s", r.URL.Scheme, r.Host, user.Username, token)
+	verificationLink := fmt.Sprintf("https://%s/api/v2/user/%s/verify/%s", r.Host, user.Username, token)
 	emailBody := fmt.Sprintf(`Dear %s,
 
 We hope this email finds you well. Thank you for choosing One Alias Service.
