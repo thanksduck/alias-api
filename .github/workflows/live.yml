@@ -1,4 +1,4 @@
-name: Live
+name: Go Live
 
 # Trigger Points
 on:
@@ -6,21 +6,22 @@ on:
     branches:
       - main
 
+
 jobs:
-  deploy:
+  GoLive:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Connect Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
 
       - name: Deploy to server
-        uses: appleboy/ssh-action@master
+        run: |
+          echo "Login To Machine Was SuccessFull"
+          ssh -o "StrictHostKeyChecking no" ubuntu@sora "
+          cd ${{secrets.PROJECT_PATH}} && sh .scripts/deploy.sh
+          "
 
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSHKEY }}
-          envs: SECRET_PATH
-          script: |
-            echo "Login To Machine Was SuccessFull"
-            cd ~/server/alias-api/ && sh ./.scripts/deploy.sh
