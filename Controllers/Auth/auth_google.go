@@ -194,6 +194,6 @@ func RedirectToFrontend(w http.ResponseWriter, r *http.Request, user *models.Use
 	redirectURL := fmt.Sprintf("%s?token=%s", frontendURL, url.QueryEscape(token))
 
 	// Redirect to frontend with encoded URL
-	// http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
-	utils.CreateSendResponse(w, user, redirectURL, http.StatusOK, "user", user.Username)
+	http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+	// utils.CreateSendResponse(w, user, redirectURL, http.StatusOK, "user", user.Username)
 }
