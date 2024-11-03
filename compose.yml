@@ -5,12 +5,12 @@ services:
       dockerfile: Dockerfile
     container_name: alias-api
     env_file: .env
-    ports:
-      - "[::1]:6777:6777"
-      - "127.0.0.1:6777:6777"
     networks:
       - oas
+      - npm-network
 
 networks:
   oas:
+    external: true
+  npm-network:
     external: true
