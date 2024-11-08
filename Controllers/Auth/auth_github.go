@@ -6,7 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
+	"github.com/jackc/pgx/v5"
+	models "github.com/thanksduck/alias-api/Models"
+	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -21,7 +25,7 @@ func getGithubOAuthConfig() *oauth2.Config {
 		ClientID:     clientid,
 		ClientSecret: clientSecret,
 		RedirectURL:  redirectUrl,
-		Scopes:       []string{"email", "profile"},
+		Scopes:       []string{"user:email", "read:user"},
 		Endpoint:     github.Endpoint,
 	}
 
@@ -44,23 +48,152 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
 	client := conf.Client(context.Background(), t)
-	// resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
-	resp, err := client.Get("https://api.github.com/user")
+
+	// Get user profile
+	userResp, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	defer userResp.Body.Close()
 
-	defer resp.Body.Close()
-
-	var v any
-
-	// Reading the JSON body using JSON decoder
-	err = json.NewDecoder(resp.Body).Decode(&v)
-	if err != nil {
+	var userData map[string]interface{}
+	if err := json.NewDecoder(userResp.Body).Decode(&userData); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, v, "Github Login Successful", http.StatusOK, "user", `1`)
+
+	// Get user emails
+	emailResp, err := client.Get("https://api.github.com/user/emails")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer emailResp.Body.Close()
+
+	var emails []map[string]interface{}
+	if err := json.NewDecoder(emailResp.Body).Decode(&emails); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Add primary email to user data
+	for _, email := range emails {
+		if email["primary"].(bool) {
+			userData["email"] = email["email"]
+			break
+		}
+	}
+
+	/*
+
+		so what i will be getting for it ,
+		userData["email"]
+		userData["login"] // username
+		userData["name"] // name
+		userData["avatar_url"] // avatar
+		userData["id"] // github id
+
+	*/
+	email, ok := userData["email"].(string)
+	if !ok || email == "" {
+		utils.SendErrorResponse(w, "Email not found or empty", http.StatusBadRequest)
+		return
+	}
+
+	// Get github username
+	githubUsername, ok := userData["login"].(string)
+	if !ok || githubUsername == "" {
+		utils.SendErrorResponse(w, "Github username not found or empty", http.StatusBadRequest)
+		return
+	}
+
+	name, _ := userData["name"].(string)
+	if name == "" {
+		name, _ = userData["login"].(string)
+	}
+	if name == "" {
+		nameParts := strings.Split(email, "@")
+		if len(nameParts) > 0 {
+			name = nameParts[0]
+		}
+	}
+
+	// Check if user exists
+	existingUser, err := repository.FindUserByUsernameOrEmail("", email)
+	if err != nil && err != pgx.ErrNoRows {
+		fmt.Println("Error finding user:", err)
+		utils.SendErrorResponse(w, "Error finding user", http.StatusInternalServerError)
+		return
+	}
+
+	var user *models.User
+	if existingUser != nil {
+		user = existingUser
+		user.EmailVerified = true
+		user.Avatar = getStringValue(userData, "avatar_url", "")
+		user.Name = name
+		if user.Provider != "github" {
+			user.Provider = "github"
+		}
+		_, err = repository.UpdateUser(user.ID, user)
+	} else {
+		username := githubUsername
+		usernameExists, err := repository.FindUserByUsernameOrEmail(username, "")
+		if err != nil && err != pgx.ErrNoRows {
+			fmt.Println("Error finding user by username:", err)
+			utils.SendErrorResponse(w, "Error finding user by username", http.StatusInternalServerError)
+			return
+		}
+		if usernameExists != nil {
+			username = username + "1"
+		}
+
+		user = &models.User{
+			Email:         email,
+			EmailVerified: true,
+			Username:      username,
+			Name:          name,
+			Provider:      "github",
+			Avatar:        getStringValue(userData, "avatar_url", ""),
+			Password:      " ",
+		}
+		user, err = repository.CreateOrUpdateUser(user)
+		if err != nil {
+			fmt.Println("Error creating user:", err)
+			utils.SendErrorResponse(w, "Error creating user", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if err != nil && err != pgx.ErrNoRows {
+		fmt.Println("Error updating/creating user:", err)
+		utils.SendErrorResponse(w, "Error updating/creating user", http.StatusInternalServerError)
+		return
+	}
+
+	socialProfile, err := repository.FindSocialProfileByIDOrUsername(user.ID, user.Username)
+	if err != nil && err != pgx.ErrNoRows {
+		fmt.Println("Error finding social profile:", err)
+		utils.SendErrorResponse(w, "Error finding social profile", http.StatusInternalServerError)
+		return
+	}
+
+	if socialProfile == nil {
+		socialProfile = &models.SocialProfile{
+			UserID:   user.ID,
+			Username: githubUsername,
+			Github:   githubUsername,
+		}
+		_, err = repository.CreateOrUpdateSocialProfile(socialProfile)
+		if err != nil {
+			fmt.Println("Error creating social profile:", err)
+			utils.SendErrorResponse(w, "Error creating social profile", http.StatusInternalServerError)
+			return
+		}
+	}
+	RedirectToFrontend(w, r, user)
+
 }

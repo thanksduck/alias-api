@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -76,6 +77,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "User already exists", http.StatusConflict)
 		return
 	} else if err != pgx.ErrNoRows {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Error checking user existence", http.StatusInternalServerError)
 		return
 	}

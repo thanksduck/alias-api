@@ -35,7 +35,7 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		}()
 		<-done
 		duration := time.Since(start)
-		log.Printf("Method: %s, Path: %s, Protocol: %s, Response time: %s",
-			r.Method, r.URL.Path, r.Proto, duration)
+		log.Printf("%s, %s, time: %s, code: ",
+			r.Method, r.URL.Path, duration)
 	})
 }

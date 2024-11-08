@@ -25,8 +25,8 @@ CREATE INDEX idx_email ON users (email);
 -- Create rules table with ON UPDATE CASCADE
 CREATE TABLE rules (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
     alias_email VARCHAR(255) NOT NULL UNIQUE,
     destination_email VARCHAR(255) NOT NULL,
     active BOOLEAN DEFAULT TRUE,
@@ -43,8 +43,8 @@ CREATE INDEX idx_alias_email ON rules (alias_email);
 -- Create destinations table with ON UPDATE CASCADE
 CREATE TABLE destinations (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
     destination_email VARCHAR(255) NOT NULL UNIQUE,
     domain VARCHAR(255) NOT NULL,
     cloudflare_destination_id VARCHAR(255) NOT NULL UNIQUE,
@@ -61,8 +61,8 @@ CREATE INDEX idx_domain ON destinations (domain);
 -- Create social_profiles table with ON UPDATE CASCADE
 CREATE TABLE social_profiles (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER UNIQUE REFERENCES users(id),
-    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
     github VARCHAR(255),
     google VARCHAR(255),
     facebook VARCHAR(255),
@@ -76,8 +76,8 @@ CREATE INDEX idx_social_profiles_username ON social_profiles (username);
 -- Create custom_domains table with ON UPDATE CASCADE
 CREATE TABLE custom_domains (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
     domain VARCHAR(255) NOT NULL UNIQUE
 );
 

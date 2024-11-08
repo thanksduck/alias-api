@@ -20,7 +20,6 @@ import (
 
 var (
 	GoogleOauthConfig *oauth2.Config
-	GithubOauthConfig *oauth2.Config
 	OauthStateString  = "random"
 )
 
@@ -30,8 +29,11 @@ func init() {
 		RedirectURL:  RdUrl,
 		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
-		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email"},
-		Endpoint:     google.Endpoint,
+		Scopes: []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/userinfo.profile",
+		},
+		Endpoint: google.Endpoint,
 	}
 }
 
@@ -67,6 +69,27 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get name from Google profile data
+	name, _ := userInfo["name"].(string)
+	if name == "" {
+		givenName, _ := userInfo["given_name"].(string)
+		familyName, _ := userInfo["family_name"].(string)
+		if givenName != "" {
+			name = givenName
+			if familyName != "" {
+				name += " " + familyName
+			}
+		}
+	}
+
+	// If still no name, fallback to email username
+	if name == "" {
+		nameParts := strings.Split(email, "@")
+		if len(nameParts) > 0 {
+			name = nameParts[0]
+		}
+	}
+
 	existingUser, err := repository.FindUserByUsernameOrEmail("", email)
 	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println("Error finding user:", err)
@@ -79,6 +102,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		user = existingUser
 		user.EmailVerified = true
 		user.Avatar = getStringValue(userInfo, "picture", "")
+		user.Name = name // Update name from Google profile
 		if user.Provider != "google" {
 			user.Provider = "google"
 		}
@@ -94,13 +118,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		if usernameExists != nil {
 			username = username + "1"
 		}
-		name := getStringValue(userInfo, "name", "Google User")
-		if name == "Google User" {
-			nameParts := strings.Split(email, "@")
-			if len(nameParts) > 0 {
-				name = nameParts[0]
-			}
-		}
+
 		user = &models.User{
 			Email:         email,
 			Name:          name,
