@@ -3,6 +3,7 @@ package user
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
@@ -33,6 +34,8 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if requestData.Username != "" {
+
+		requestData.Username = strings.ToLower(requestData.Username)
 
 		if !middlewares.ValidBody.IsValidUsername(requestData.Username) {
 			utils.SendErrorResponse(w, "Username must be at least 4 characters long, start with an alphabet, and can contain numbers, dots, or underscores", http.StatusBadRequest)

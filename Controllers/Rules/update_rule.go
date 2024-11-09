@@ -37,34 +37,38 @@ func UpdateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	domain := strings.Split(rule.AliasEmail, "@")[1]
-
 	var ruleData models.Rule
-
 	err = json.NewDecoder(r.Body).Decode(&ruleData)
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
 	if ruleData.AliasEmail == "" || ruleData.DestinationEmail == "" {
 		utils.SendErrorResponse(w, "Alias and Destination email cannot be empty", http.StatusBadRequest)
 		return
 	}
-	err = requests.CreateRuleRequest(`DELETE`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
-	if err != nil {
-		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
-		return
+
+	// Only make backend requests if alias or destination email changes
+	if rule.AliasEmail != ruleData.AliasEmail || rule.DestinationEmail != ruleData.DestinationEmail {
+		domain := strings.Split(rule.AliasEmail, "@")[1]
+		err = requests.CreateRuleRequest(`DELETE`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+			return
+		}
+
+		err = requests.CreateRuleRequest(`POST`, ruleData.AliasEmail, ruleData.DestinationEmail, rule.Username, strings.Split(ruleData.AliasEmail, "@")[1])
+		if err != nil {
+			utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	rule.AliasEmail = ruleData.AliasEmail
 	rule.DestinationEmail = ruleData.DestinationEmail
 	rule.Comment = ruleData.Comment
 	rule.Name = ruleData.Name
-	err = requests.CreateRuleRequest(`POST`, rule.AliasEmail, rule.DestinationEmail, rule.Username, strings.Split(rule.AliasEmail, "@")[1])
-	if err != nil {
-		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
-		return
-	}
 
 	updatedRule, err := repository.UpdateRuleByID(ruleID, rule)
 	if err != nil {

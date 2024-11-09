@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	db "github.com/thanksduck/alias-api/Database"
 	models "github.com/thanksduck/alias-api/Models"
@@ -202,7 +203,7 @@ func VerifyDestinationByID(id uint32) error {
 	return err
 }
 
-func DeleteDestinationByID(id uint32) error {
+func DeleteDestinationByID(id uint32, userID uint32) error {
 	pool := db.GetPool()
 	tx, err := pool.Begin(context.Background())
 	if err != nil {
@@ -210,17 +211,15 @@ func DeleteDestinationByID(id uint32) error {
 	}
 	defer tx.Rollback(context.Background())
 
-	var userID uint32
-	err = tx.QueryRow(context.Background(),
-		`SELECT user_id FROM destinations WHERE id = $1`, id).Scan(&userID)
+	result, err := tx.Exec(context.Background(),
+		`DELETE FROM destinations WHERE id = $1 AND user_id = $2`, id, userID)
 	if err != nil {
 		return err
 	}
 
-	_, err = tx.Exec(context.Background(),
-		`DELETE FROM destinations WHERE id = $1`, id)
-	if err != nil {
-		return err
+	// Check if any row was actually deleted
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("no destination found with id %d for user %d", id, userID)
 	}
 
 	_, err = tx.Exec(context.Background(),

@@ -135,7 +135,7 @@ func ToggleRuleByID(id uint32) error {
 	return nil
 }
 
-func DeleteRuleByID(id uint32) error {
+func DeleteRuleByID(id uint32, userID uint32) error {
 	pool := db.GetPool()
 	tx, err := pool.Begin(context.Background())
 	if err != nil {
@@ -151,7 +151,7 @@ func DeleteRuleByID(id uint32) error {
 	}
 
 	_, err = tx.Exec(context.Background(),
-		`UPDATE users SET alias_count = alias_count - 1 WHERE id = (SELECT user_id FROM rules WHERE id = $1)`, id)
+		`UPDATE users SET alias_count = alias_count - 1 WHERE id = $1`, userID)
 	if err != nil {
 		fmt.Println(err)
 		return err

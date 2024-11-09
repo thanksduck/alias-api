@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	models "github.com/thanksduck/alias-api/Models"
 	repository "github.com/thanksduck/alias-api/Repository"
@@ -53,6 +54,22 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 	}
 
 	domain := strings.ToLower(requestBody.Domain)
+
+	// Check if destination already exists
+	destination, err := repository.FindDestinationByEmail(destinationEmail)
+	if err != nil && err != pgx.ErrNoRows {
+		fmt.Println(err)
+		utils.SendErrorResponse(w, "Error finding destination", http.StatusInternalServerError)
+		return
+	}
+	if destination != nil {
+		if destination.Username != user.Username {
+			utils.SendErrorResponse(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		utils.SendErrorResponse(w, "Destination already exists, Please Verify if You havnt", http.StatusConflict)
+		return
+	}
 
 	destinationResponse, err := requests.DestinationRequest(`POST`, domain, destinationEmail, ``)
 	if err != nil {

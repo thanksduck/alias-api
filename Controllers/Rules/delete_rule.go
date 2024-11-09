@@ -45,7 +45,7 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.DeleteRuleByID(ruleID)
+	err = repository.DeleteRuleByID(ruleID, user.ID)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)

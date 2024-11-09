@@ -56,7 +56,7 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.DeleteDestinationByID(destinationID)
+	err = repository.DeleteDestinationByID(destinationID, user.ID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
