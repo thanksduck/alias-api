@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/jackc/pgx/v5"
+	models "github.com/thanksduck/alias-api/Models"
 	repository "github.com/thanksduck/alias-api/Repository"
 	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
@@ -77,14 +79,42 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, rule := range rules {
-		err = requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
-		if err != nil {
-			utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
-			return
-		}
+	// Create a semaphore with buffer of 10 to limit concurrent operations
+	sem := make(chan struct{}, 10)
+	errChan := make(chan error, len(rules))
+	var wg sync.WaitGroup
 
-		err = repository.ToggleRuleByID(rule.ID)
+	for _, rule := range rules {
+		wg.Add(1)
+		go func(rule models.Rule) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// Make the API request
+			err := requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			// Toggle the rule in database
+			err = repository.ToggleRuleByID(rule.ID)
+			if err != nil {
+				errChan <- err
+				return
+			}
+		}(rule)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(errChan)
+
+	// Check for any errors
+	for err := range errChan {
 		if err != nil {
 			utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 			return
