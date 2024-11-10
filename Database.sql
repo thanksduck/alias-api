@@ -27,7 +27,7 @@ CREATE TABLE rules (
     user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
     username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
     alias_email VARCHAR(255) NOT NULL UNIQUE,
-    destination_email VARCHAR(255) NOT NULL REFERENCES destinations(destination_email),
+    destination_email VARCHAR(255) NOT NULL, 
     active BOOLEAN DEFAULT TRUE,
     comment VARCHAR(255),
     name VARCHAR(50),
