@@ -60,7 +60,7 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = requests.DestinationRequest(`DELETE`, destination.DestinationEmail, destination.Username, destination.CloudflareDestinationID)
+	_, err = requests.DestinationRequest(`DELETE`, destination.Domain, destination.Username, destination.CloudflareDestinationID)
 	if err != nil {
 		fmt.Println("Destination DELETE request error:", err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
@@ -118,7 +118,6 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 
 	for err := range errChan {
 		if err != nil {
-			fmt.Println("Error in goroutine:", err)
 			utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 			return
 		}
