@@ -21,14 +21,13 @@ CREATE TABLE users (
 
 CREATE INDEX idx_username ON users (username);
 CREATE INDEX idx_email ON users (email);
-
 -- Create rules table with ON UPDATE CASCADE
 CREATE TABLE rules (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
     username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
     alias_email VARCHAR(255) NOT NULL UNIQUE,
-    destination_email VARCHAR(255) NOT NULL,
+    destination_email VARCHAR(255) NOT NULL REFERENCES destinations(destination_email),
     active BOOLEAN DEFAULT TRUE,
     comment VARCHAR(255),
     name VARCHAR(50),

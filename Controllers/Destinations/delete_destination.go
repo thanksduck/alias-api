@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/jackc/pgx/v5"
 	repository "github.com/thanksduck/alias-api/Repository"
 	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
@@ -61,5 +62,34 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
+
+	// we will toggle all the rules to inactive and also toggle them in the rules table
+	domain := destination.Domain
+
+	rules, err := repository.FindActiveRulesByDestinationEmail(destination.DestinationEmail)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			// No rules found, we can proceed
+			utils.CreateSendResponse(w, nil, "Destination Deleted Successfully", http.StatusNoContent, "destination", user.Username)
+			return
+		}
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	for _, rule := range rules {
+		err = requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
+		if err != nil {
+			utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+			return
+		}
+
+		err = repository.ToggleRuleByID(rule.ID)
+		if err != nil {
+			utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	utils.CreateSendResponse(w, nil, "Destination Deleted Successfully", http.StatusNoContent, "destination", user.Username)
 }
