@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,7 +36,8 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 
 	_, err = repository.FindDestinationByEmail(rule.DestinationEmail)
 	if err != nil {
-		utils.SendErrorResponse(w, "You Can Only Delete Rule After You Deleted Your Destination", http.StatusNotFound)
+		message := fmt.Sprintf("The destination email %s has been removed by You. You can update the rule name and comment, but the rule must remain inactive until same destination is not added", rule.DestinationEmail)
+		utils.SendErrorResponse(w, message, http.StatusNotFound)
 		return
 	}
 
