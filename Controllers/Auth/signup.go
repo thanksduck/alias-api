@@ -22,6 +22,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		Email           string `json:"email"`
 		Password        string `json:"password"`
 		PasswordConfirm string `json:"passwordConfirm"`
+		Avatar          string `json:"avatar"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&requestData)
@@ -68,7 +69,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		Email:    requestData.Email,
 		Password: hashedPassword,
 		Provider: "local",
-		Avatar:   ``, // default avatar
+		Avatar:   requestData.Avatar,
 	}
 
 	// check if the user already exists

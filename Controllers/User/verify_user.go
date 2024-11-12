@@ -5,7 +5,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
 
+	auth "github.com/thanksduck/alias-api/Controllers/Auth"
 	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
@@ -46,7 +48,7 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	verificationLink := fmt.Sprintf("https://%s/api/v2/user/%s/verify/%s", r.Host, user.Username, token)
+	verificationLink := fmt.Sprintf("https://%s/api/v2/user/%s/verify/%s", os.Getenv("REDIRECT_HOST"), user.Username, token)
 	emailBody := fmt.Sprintf(`Dear %s,
 
 We hope this email finds you well. Thank you for choosing One Alias Service.
@@ -104,6 +106,5 @@ func VerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.EmailVerified = true
-	utils.CreateSendResponse(w, user, "Email verified successfully", http.StatusOK, "user", user.Username)
-
+	auth.RedirectToFrontend(w, r, user)
 }
