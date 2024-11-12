@@ -37,7 +37,7 @@ func VerifyDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	destResponse, err := requests.DestinationRequest(`PATCH`, destination.DestinationEmail, destination.Username, destination.CloudflareDestinationID)
+	destResponse, err := requests.DestinationRequest(`GET`, destination.DestinationEmail, destination.Username, destination.CloudflareDestinationID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
