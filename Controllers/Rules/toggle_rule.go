@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,14 +19,12 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 	ruleIDStr := r.PathValue("id")
 	ruleIDInt, err := strconv.Atoi(ruleIDStr)
 	if err != nil {
-		fmt.Println(err)
 		utils.SendErrorResponse(w, "Invalid rule ID", http.StatusBadRequest)
 		return
 	}
 	ruleID := uint32(ruleIDInt)
 	rule, err := repository.FindRuleByID(ruleID)
 	if err != nil {
-		fmt.Println(err)
 		utils.SendErrorResponse(w, "Rule not found", http.StatusNotFound)
 		return
 	}
@@ -36,17 +33,21 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err = repository.FindDestinationByEmail(rule.DestinationEmail)
+	if err != nil {
+		utils.SendErrorResponse(w, "You Can Only Delete Rule After You Deleted Your Destination", http.StatusNotFound)
+		return
+	}
+
 	domain := strings.Split(rule.AliasEmail, "@")[1]
 	err = requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
 	if err != nil {
-		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
 	err = repository.ToggleRuleByID(ruleID)
 	if err != nil {
-		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}

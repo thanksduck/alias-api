@@ -79,7 +79,7 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Set up error handling
-	errChan := make(chan error, len(rules))
+	errChan := make(chan error, len(rules)) // Buffer sized to match maximum possible errors
 	var wg sync.WaitGroup
 
 	// Create semaphore for limiting concurrent goroutines
@@ -88,40 +88,40 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 	// Process rules in parallel
 	for _, rule := range rules {
 		wg.Add(1)
+		// Capture rule in the closure correctly
 		go func(rule models.Rule) {
 			defer wg.Done()
-
 			// Acquire semaphore
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
 			// Update rule
-			err := requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain)
-			if err != nil {
+			if err := requests.CreateRuleRequest(`PATCH`, rule.AliasEmail, rule.DestinationEmail, rule.Username, domain); err != nil {
 				errChan <- fmt.Errorf("failed to update rule %d: %w", rule.ID, err)
 				return
 			}
+			log.Printf("Rule %d updated", rule.ID)
 
 			// Toggle rule
-			err = repository.ToggleRuleByID(rule.ID)
-			if err != nil {
+			if err := repository.ToggleRuleByID(rule.ID); err != nil {
 				errChan <- fmt.Errorf("failed to toggle rule %d: %w", rule.ID, err)
 				return
 			}
+			log.Printf("Rule %d toggled", rule.ID)
 		}(rule)
 	}
 
 	// Wait for all goroutines to complete
 	wg.Wait()
+
+	// Close error channel after all goroutines are done
 	close(errChan)
 
 	// Check for any errors
 	var hasError bool
 	for err := range errChan {
-		if err != nil {
-			hasError = true
-			log.Printf("Error processing rule: %v", err)
-		}
+		hasError = true
+		log.Printf("Error processing rule: %v", err)
 	}
 
 	if hasError {

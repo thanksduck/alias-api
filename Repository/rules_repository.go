@@ -90,7 +90,7 @@ func FindRulesByDestinationEmail(destinationEmail string) ([]models.Rule, error)
 func FindActiveRulesByDestinationEmail(destinationEmail string) ([]models.Rule, error) {
 	pool := db.GetPool()
 	rows, err := pool.Query(context.Background(),
-		`SELECT id, user_id, username, alias_email, destination_email, active, comment,name FROM rules WHERE destination_email= $1 and active=false`, destinationEmail)
+		`SELECT id, user_id, username, alias_email, destination_email, active, comment,name FROM rules WHERE destination_email= $1 AND active=true`, destinationEmail)
 	if err != nil {
 		return nil, fmt.Errorf("error querying rules: %w", err)
 	}
