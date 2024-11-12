@@ -108,6 +108,16 @@ func FindActiveRulesByDestinationEmail(destinationEmail string) ([]models.Rule, 
 	return rules, nil
 }
 
+func MakeAllRuleInactiveByDestinationEmail(destinationEmail string) error {
+	pool := db.GetPool()
+	_, err := pool.Exec(context.Background(),
+		`UPDATE rules SET active = false WHERE destination_email = $1`, destinationEmail)
+	if err != nil {
+		return fmt.Errorf("error updating rules: %w", err)
+	}
+	return nil
+}
+
 func FindRuleByAliasEmail(aliasEmail string) (*models.Rule, error) {
 	pool := db.GetPool()
 	var rule models.Rule

@@ -100,14 +100,8 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 				errChan <- fmt.Errorf("failed to update rule %d: %w", rule.ID, err)
 				return
 			}
-			log.Printf("Rule %d updated", rule.ID)
 
 			// Toggle rule
-			if err := repository.ToggleRuleByID(rule.ID); err != nil {
-				errChan <- fmt.Errorf("failed to toggle rule %d: %w", rule.ID, err)
-				return
-			}
-			log.Printf("Rule %d toggled", rule.ID)
 		}(rule)
 	}
 
@@ -126,6 +120,11 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 
 	if hasError {
 		utils.SendErrorResponse(w, "Something went wrong while processing rules", http.StatusInternalServerError)
+		return
+	}
+	err = repository.MakeAllRuleInactiveByDestinationEmail(destination.DestinationEmail)
+	if err != nil && err != pgx.ErrNoRows {
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
