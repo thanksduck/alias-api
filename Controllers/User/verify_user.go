@@ -48,7 +48,7 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	verificationLink := fmt.Sprintf("https://%s/api/v2/user/%s/verify/%s", os.Getenv("REDIRECT_HOST"), user.Username, token)
+	verificationLink := fmt.Sprintf("%s/api/v2/user/%s/verify/%s", os.Getenv("REDIRECT_HOST"), user.Username, token)
 	emailBody := fmt.Sprintf(`Dear %s,
 
 We hope this email finds you well. Thank you for choosing One Alias Service.
@@ -70,6 +70,7 @@ The One Alias Service Team`, user.Name, verificationLink)
 		utils.SendErrorResponse(w, "Error sending email", http.StatusInternalServerError)
 		return
 	}
+
 	utils.CreateSendResponse(w, user, "Verification email sent, please Check Your Spam as well", http.StatusOK, "user", user.Username)
 }
 

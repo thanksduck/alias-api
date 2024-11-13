@@ -63,6 +63,11 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !savedDestination.Verified {
+		utils.SendErrorResponse(w, "Destination not verified", http.StatusForbidden)
+		return
+	}
+
 	if savedDestination.Domain != domain {
 		utils.SendErrorResponse(w, "You are not allowed Create rule for this domain", http.StatusForbidden)
 		return
@@ -73,7 +78,7 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if existingRule != nil {
-		utils.SendErrorResponse(w, "Alias Already Exists", http.StatusConflict)
+		utils.SendErrorResponse(w, "Email is already Taken 🥲", http.StatusConflict)
 		return
 	}
 
