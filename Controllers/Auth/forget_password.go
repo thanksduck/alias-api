@@ -68,7 +68,7 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Error Processing Reset Link", http.StatusInternalServerError)
 		return
 	}
-	resetURL := os.Getenv("REDIRECT_HOST") + "/reset-password/" + hashedToken
+	resetURL := os.Getenv("FRONTEND_HOST") + "/reset-password/" + hashedToken
 	message := "Dear " + user.Name + "\n\n" +
 		"You have requested to reset your password. Please click on the link below to reset your password. This link is valid for 10 minutes.\n\n" +
 		resetURL + "\n\n" +
