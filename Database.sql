@@ -48,16 +48,14 @@ CREATE TABLE user_auth (
 CREATE INDEX idx_user_auth_user_id ON user_auth (user_id);
 CREATE INDEX idx_user_auth_username ON user_auth (username);
 
--- Create rules table with ON UPDATE CASCADE
-CREATE TABLE rules (
+
+-- Create the user_auth table with the required schema
+CREATE TABLE user_auth (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
-    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
-    alias_email VARCHAR(255) NOT NULL UNIQUE,
-    destination_email VARCHAR(255) NOT NULL, 
-    active BOOLEAN DEFAULT TRUE,
-    comment VARCHAR(255),
-    name VARCHAR(50),
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) NOT NULL REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
+    password_reset_token VARCHAR(255),
+    password_reset_expires TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

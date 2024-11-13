@@ -96,24 +96,47 @@ func FindUserByUsernameOrEmail(username string, email string) (*models.User, err
 
 func UpdatePassword(id uint32, password string) error {
 	pool := db.GetPool()
-	_, err := pool.Exec(context.Background(),
-		`UPDATE users SET password = $1, password_changed_at = $2, password_reset_token = '', password_reset_expires = NULL WHERE id = $3`,
+
+	// Start a transaction since we're updating two tables
+	tx, err := pool.Begin(context.Background())
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer tx.Rollback(context.Background())
+
+	// Update password in users table
+	_, err = tx.Exec(context.Background(),
+		`UPDATE users SET password = $1, password_changed_at = $2 WHERE id = $3`,
 		password, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("error updating password: %w", err)
 	}
+
+	// Update password related fields in user_auth table
+	_, err = tx.Exec(context.Background(),
+		`UPDATE user_auth SET  password_reset_token = NULL, password_reset_expires = NULL 
+		 WHERE user_id = $1`,
+		id)
+	if err != nil {
+		return fmt.Errorf("error updating password auth fields: %w", err)
+	}
+
+	if err = tx.Commit(context.Background()); err != nil {
+		return fmt.Errorf("error committing transaction: %w", err)
+	}
+
 	return nil
 }
 
-func DeletePasswordResetToken(id uint32) error {
-	pool := db.GetPool()
-	_, err := pool.Exec(context.Background(),
-		`UPDATE users SET password_reset_token = '', password_reset_expires = NULL WHERE id = $1`, id)
-	if err != nil {
-		return fmt.Errorf("error deleting password reset token: %w", err)
-	}
-	return nil
-}
+// func DeletePasswordResetToken(id uint32) error {
+// 	pool := db.GetPool()
+// 	_, err := pool.Exec(context.Background(),
+// 		`UPDATE users SET password_reset_token = '', password_reset_expires = NULL WHERE id = $1`, id)
+// 	if err != nil {
+// 		return fmt.Errorf("error deleting password reset token: %w", err)
+// 	}
+// 	return nil
+// }
 
 func UpdateUser(id uint32, user *models.User) (*models.User, error) {
 	pool := db.GetPool()

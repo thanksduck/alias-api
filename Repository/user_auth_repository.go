@@ -9,6 +9,8 @@ import (
 	models "github.com/thanksduck/alias-api/Models"
 )
 
+// SavePasswordResetToken stores or updates a password reset token
+// Requires user_auth table to have a PRIMARY KEY or UNIQUE constraint on user_id
 func SavePasswordResetToken(userID uint32, username string, token string) error {
 	pool := db.GetPool()
 	expiresAt := time.Now().Add(10 * time.Minute)

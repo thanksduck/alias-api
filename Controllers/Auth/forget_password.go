@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
@@ -37,7 +38,7 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 
 	err = repository.HasNoActiveResetToken(user.ID)
 	if err != nil {
-		utils.SendErrorResponse(w, "Password reset link already sent", http.StatusConflict)
+		utils.SendErrorResponse(w, "A password reset link was recently sent. Please wait 10 minutes before requesting another one.", http.StatusConflict)
 		return
 	}
 
@@ -67,7 +68,7 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Error Processing Reset Link", http.StatusInternalServerError)
 		return
 	}
-	resetURL := r.Referer() + "auth/reset-password/" + hashedToken
+	resetURL := os.Getenv("REDIRECT_HOST") + "/reset-password/" + hashedToken
 	message := "Dear " + user.Name + "\n\n" +
 		"You have requested to reset your password. Please click on the link below to reset your password. This link is valid for 10 minutes.\n\n" +
 		resetURL + "\n\n" +

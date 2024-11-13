@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
@@ -11,22 +10,20 @@ import (
 )
 
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
-	// extract the token from the url
 	var requestData struct {
 		Password        string `json:"password"`
 		PasswordConfirm string `json:"passwordConfirm"`
 	}
-	// extract the token from the uri
+
 	hashedToken := r.PathValue("token")
-	fmt.Println(hashedToken)
 	if hashedToken == "" {
-		utils.SendErrorResponse(w, "Invalid token", http.StatusBadRequest)
+		utils.SendErrorResponse(w, "Invalid reset link", http.StatusBadRequest)
 		return
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
-		utils.SendErrorResponse(w, "Invalid request payload", http.StatusBadRequest)
+		utils.SendErrorResponse(w, "Invalid request format", http.StatusBadRequest)
 		return
 	}
 
@@ -42,34 +39,33 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repository.FindUserByPasswordResetToken(hashedToken)
 	if err != nil {
-		utils.SendErrorResponse(w, "Reset Link is not valid", http.StatusBadRequest)
+		utils.SendErrorResponse(w, "Invalid reset link", http.StatusBadRequest)
 		return
 	}
 	userID := user.ID
 
 	err = repository.IsPasswordResetTokenExpired(hashedToken)
 	if err != nil {
-		err = repository.DeletePasswordResetToken(userID)
+		err = repository.RemovePasswordResetToken(userID)
 		if err != nil {
-			utils.SendErrorResponse(w, "Something Went Wrong", http.StatusInternalServerError)
+			utils.SendErrorResponse(w, "An error occurred. Please try again", http.StatusInternalServerError)
 			return
 		}
-		utils.SendErrorResponse(w, "Reset Link has been expired", http.StatusBadRequest)
+		utils.SendErrorResponse(w, "Reset link has expired. Please request a new one", http.StatusBadRequest)
 		return
 	}
 
 	hashedPassword, err := utils.HashPassword(requestData.Password)
 	if err != nil {
-		utils.SendErrorResponse(w, "Something Went Wrong", http.StatusInternalServerError)
+		utils.SendErrorResponse(w, "An error occurred. Please try again", http.StatusInternalServerError)
 		return
 	}
 
 	err = repository.UpdatePassword(userID, hashedPassword)
 	if err != nil {
-		utils.SendErrorResponse(w, "Something Went Wrong", http.StatusInternalServerError)
+		utils.SendErrorResponse(w, "An error occurred. Please try again", http.StatusInternalServerError)
 		return
 	}
 
-	utils.CreateSendResponse(w, nil, "Password Reset Successful Please Login", http.StatusOK, "message", `0`)
-
+	utils.CreateSendResponse(w, nil, "Password reset successful. You can now login with your new password", http.StatusOK, "message", `0`)
 }
