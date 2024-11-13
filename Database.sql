@@ -12,8 +12,7 @@ CREATE TABLE users (
     provider VARCHAR(255),
     avatar VARCHAR(500),
     password_changed_at TIMESTAMP,
-    password_reset_token VARCHAR(255),
-    password_reset_expires TIMESTAMP,
+   
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -21,6 +20,34 @@ CREATE TABLE users (
 
 CREATE INDEX idx_username ON users (username);
 CREATE INDEX idx_email ON users (email);
+-- Create user_tokens table
+CREATE TABLE user_tokens (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+     username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
+    token VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- CREATE INDEX idx_user_id ON user_tokens (user_id);
+
+-- Create user_auth table
+CREATE TABLE user_auth (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
+     password_reset_token VARCHAR(255),
+    password_reset_expires TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_auth_user_id ON user_auth (user_id);
+CREATE INDEX idx_user_auth_username ON user_auth (username);
+
 -- Create rules table with ON UPDATE CASCADE
 CREATE TABLE rules (
     id SERIAL PRIMARY KEY,

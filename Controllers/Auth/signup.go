@@ -32,7 +32,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	username := strings.ToLower(requestData.Username)
-
+	email := strings.ToLower(requestData.Email)
 	if !middlewares.ValidBody.IsValidUsername(username) {
 		utils.SendErrorResponse(w, "Username must be at least 4 characters long, start with an alphabet, and can contain numbers, dots, or underscores", http.StatusBadRequest)
 		return
@@ -43,7 +43,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !middlewares.ValidBody.IsValidEmail(requestData.Email) {
+	if !middlewares.ValidBody.IsValidEmail(email) {
 		utils.SendErrorResponse(w, "Email must contain only letters, numbers, dots, or hyphens", http.StatusBadRequest)
 		return
 	}
@@ -66,7 +66,7 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 	user := &models.User{
 		Username: username,
 		Name:     requestData.Name,
-		Email:    requestData.Email,
+		Email:    email,
 		Password: hashedPassword,
 		Provider: "local",
 		Avatar:   requestData.Avatar,

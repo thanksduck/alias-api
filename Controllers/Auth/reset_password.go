@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	repository "github.com/thanksduck/alias-api/Repository"
@@ -43,18 +42,19 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	user, err := repository.FindUserByPasswordResetToken(hashedToken)
 	if err != nil {
-		utils.SendErrorResponse(w, "Token is not valid", http.StatusBadRequest)
+		utils.SendErrorResponse(w, "Reset Link is not valid", http.StatusBadRequest)
 		return
 	}
 	userID := user.ID
 
-	if user.PasswordResetExpires.Before(time.Now()) {
-		err := repository.DeletePasswordResetToken(userID)
+	err = repository.IsPasswordResetTokenExpired(hashedToken)
+	if err != nil {
+		err = repository.DeletePasswordResetToken(userID)
 		if err != nil {
 			utils.SendErrorResponse(w, "Something Went Wrong", http.StatusInternalServerError)
 			return
 		}
-		utils.SendErrorResponse(w, "Your Password Reset Token Has been Expired", http.StatusUnauthorized)
+		utils.SendErrorResponse(w, "Reset Link has been expired", http.StatusBadRequest)
 		return
 	}
 

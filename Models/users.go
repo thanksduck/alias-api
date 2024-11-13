@@ -5,23 +5,21 @@ import (
 )
 
 type User struct {
-	ID                   uint32    `json:"-"`
-	Username             string    `json:"username,omitempty"`
-	Name                 string    `json:"name,omitempty"`
-	Email                string    `json:"email,omitempty"`
-	EmailVerified        bool      `json:"emailVerified"`
-	AliasCount           int       `json:"aliasCount"`
-	DestinationCount     int       `json:"destinationCount"`
-	IsPremium            bool      `json:"-"`
-	Password             string    `json:"-"`
-	Provider             string    `json:"-"`
-	Avatar               string    `json:"avatar,omitempty"`
-	PasswordChangedAt    time.Time `json:"-"`
-	PasswordResetToken   string    `json:"-"`
-	PasswordResetExpires time.Time `json:"-"`
-	Active               bool      `json:"-"`
-	CreatedAt            time.Time `json:"-"`
-	UpdatedAt            time.Time `json:"-"`
+	ID                uint32    `json:"-"`
+	Username          string    `json:"username,omitempty"`
+	Name              string    `json:"name,omitempty"`
+	Email             string    `json:"email,omitempty"`
+	EmailVerified     bool      `json:"emailVerified"`
+	AliasCount        int       `json:"aliasCount"`
+	DestinationCount  int       `json:"destinationCount"`
+	IsPremium         bool      `json:"-"`
+	Password          string    `json:"-"`
+	Provider          string    `json:"-"`
+	Avatar            string    `json:"avatar,omitempty"`
+	PasswordChangedAt time.Time `json:"-"`
+	Active            bool      `json:"-"`
+	CreatedAt         time.Time `json:"-"`
+	UpdatedAt         time.Time `json:"-"`
 }
 
 func (u *User) IsPasswordChangedAfter(unixTime int64) bool {

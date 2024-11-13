@@ -94,34 +94,6 @@ func FindUserByUsernameOrEmail(username string, email string) (*models.User, err
 	return &user, nil
 }
 
-func SavePasswordResetToken(id uint32, token string) error {
-	pool := db.GetPool()
-	expiresAt := time.Now().Add(10 * time.Minute)
-
-	_, err := pool.Exec(context.Background(),
-		`UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE id = $3`,
-		token, expiresAt, id)
-	if err != nil {
-		return fmt.Errorf("error updating password reset token: %w", err)
-	}
-
-	return nil
-}
-
-func FindUserByPasswordResetToken(token string) (*models.User, error) {
-	pool := db.GetPool()
-	var user models.User
-
-	err := pool.QueryRow(context.Background(),
-		`SELECT id, username, name, email, password_reset_expires FROM users WHERE password_reset_token = $1`, token).Scan(
-		&user.ID, &user.Username, &user.Name, &user.Email, &user.PasswordResetExpires)
-	if err != nil {
-		return nil, fmt.Errorf("error querying user by password reset token: %w", err)
-	}
-
-	return &user, nil
-}
-
 func UpdatePassword(id uint32, password string) error {
 	pool := db.GetPool()
 	_, err := pool.Exec(context.Background(),

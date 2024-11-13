@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	repository "github.com/thanksduck/alias-api/Repository"
@@ -22,6 +23,7 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
+	requestData.Email = strings.ToLower(requestData.Email)
 	if !middlewares.ValidBody.IsValidEmail(requestData.Email) {
 		utils.SendErrorResponse(w, "Email can't be processed", http.StatusUnprocessableEntity)
 		return
@@ -32,6 +34,13 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "User not found", http.StatusNotFound)
 		return
 	}
+
+	err = repository.HasNoActiveResetToken(user.ID)
+	if err != nil {
+		utils.SendErrorResponse(w, "Password reset link already sent", http.StatusConflict)
+		return
+	}
+
 	if !user.EmailVerified {
 		utils.SendErrorResponse(w, "Email not verified", http.StatusUnauthorized)
 		return
@@ -52,7 +61,7 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 	// Convert the hashed bytes to a hexadecimal string
 	hashedToken := hex.EncodeToString(hashedBytes)
 
-	err = repository.SavePasswordResetToken(user.ID, hashedToken)
+	err = repository.SavePasswordResetToken(user.ID, user.Username, hashedToken)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Error Processing Reset Link", http.StatusInternalServerError)
