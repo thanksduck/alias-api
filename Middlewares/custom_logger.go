@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"log"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -58,7 +58,7 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 		blue := "\033[34m"
 		reset := "\033[0m"
 
-		log.Printf("%s%s%s %s%s%s Path: %s%s%s Status: %s%d%s Duration: %s%v%s\n",
+		fmt.Printf("%s%s%s %s%s%s Path: %s%s%s Status: %s%d%s Duration: %s%v%s\n",
 			statusColor, r.Method, reset,
 			yellow, r.Proto, reset,
 			blue, r.URL.Path, reset,
