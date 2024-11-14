@@ -32,6 +32,22 @@ func getStatusColor(code int) string {
 	}
 }
 
+// getPathColor returns a unique color based on the request path
+func getPathColor(path string) string {
+	switch path {
+	case "/api/v2/mail/rules":
+		return "\033[36m" // Cyan
+	case "/api/v2/user":
+		return "\033[35m" // Magenta
+	case "/api/v2/auth":
+		return "\033[33m" // Yellow
+	case "/api/v2/mail/destinations":
+		return "\033[34m" // Blue
+	default:
+		return "\033[37m" // White for other paths
+	}
+}
+
 func RequestLoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -54,14 +70,14 @@ func RequestLoggerMiddleware(next http.Handler) http.Handler {
 
 		// ANSI color codes for terminal
 		statusColor := getStatusColor(crw.statusCode)
+		pathColor := getPathColor(r.URL.Path)
 		yellow := "\033[33m"
-		blue := "\033[34m"
 		reset := "\033[0m"
 
 		fmt.Printf("%s%s%s %s%s%s Path: %s%s%s Status: %s%d%s Duration: %s%v%s\n",
 			statusColor, r.Method, reset,
 			yellow, r.Proto, reset,
-			blue, r.URL.Path, reset,
+			pathColor, r.URL.Path, reset,
 			statusColor, crw.statusCode, reset,
 			yellow, duration, reset)
 	})
