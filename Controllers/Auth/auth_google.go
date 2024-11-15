@@ -100,13 +100,26 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 	var user *models.User
 	if existingUser != nil {
 		user = existingUser
-		user.EmailVerified = true
-		user.Avatar = getStringValue(userInfo, "picture", "")
-		user.Name = name // Update name from Google profile
-		if user.Provider != "google" {
+		if user.Provider != "google" && user.Provider != "github" {
+			updated := false
+
+			if !user.EmailVerified {
+				user.EmailVerified = true
+				updated = true
+			}
+
+			if user.Avatar == "" {
+				user.Avatar = getStringValue(userInfo, "picture", "")
+				updated = true
+			}
+
 			user.Provider = "google"
+			updated = true
+
+			if updated {
+				_, err = repository.UpdateUser(user.ID, user)
+			}
 		}
-		_, err = repository.UpdateUser(user.ID, user)
 	} else {
 		username := strings.Split(email, "@")[0]
 		usernameExists, err := repository.FindUserByUsernameOrEmail(username, "")

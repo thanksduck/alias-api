@@ -132,13 +132,31 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	var user *models.User
 	if existingUser != nil {
 		user = existingUser
-		user.EmailVerified = true
-		user.Avatar = getStringValue(userData, "avatar_url", "")
-		user.Name = name
-		if user.Provider != "github" {
+		updated := false
+
+		if user.Provider != "google" && user.Provider != "github" {
+			if !user.EmailVerified {
+				user.EmailVerified = true
+				updated = true
+			}
+
+			if user.Avatar == "" {
+				user.Avatar = getStringValue(userData, "avatar_url", "")
+				updated = true
+			}
+
 			user.Provider = "github"
+			updated = true
 		}
-		_, err = repository.UpdateUser(user.ID, user)
+
+		if user.Name != name {
+			user.Name = name
+			updated = true
+		}
+
+		if updated {
+			_, err = repository.UpdateUser(user.ID, user)
+		}
 	} else {
 		username := githubUsername
 		usernameExists, err := repository.FindUserByUsernameOrEmail(username, "")
