@@ -201,7 +201,7 @@ func GetUserInfo(state string, code string) ([]byte, error) {
 
 func RedirectToFrontend(w http.ResponseWriter, r *http.Request, user *models.User) {
 	// Create a token or session for the user here if needed
-	token, err := utils.GenerateToken(user.Username)
+	token, err := utils.GenerateTempToken(user.Username)
 	if err != nil {
 		http.Error(w, "Error creating token", http.StatusInternalServerError)
 		return

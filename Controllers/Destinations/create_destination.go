@@ -21,7 +21,7 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !user.EmailVerified {
-		utils.SendErrorResponse(w, "Please Verify Your Email to add Destination", http.StatusUnauthorized)
+		utils.SendErrorResponse(w, "Please Verify Your Email to add Destination", http.StatusForbidden)
 		return
 	}
 	if user.DestinationCount == 1 && !user.IsPremium {

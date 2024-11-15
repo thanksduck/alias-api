@@ -63,6 +63,26 @@ func GenerateToken(username string) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
+func GenerateTempToken(username string) (string, error) {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("JWT_SECRET environment variable not set")
+	}
+
+	now := time.Now()
+	claims := Claims{
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}
+
 func GeneratePasswordResetToken(username string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
