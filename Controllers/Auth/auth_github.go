@@ -159,6 +159,9 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		username := githubUsername
+		if len(username) > 15 {
+			username = username[:10]
+		}
 		usernameExists, err := repository.FindUserByUsernameOrEmail(username, "")
 		if err != nil && err != pgx.ErrNoRows {
 			fmt.Println("Error finding user by username:", err)
