@@ -13,37 +13,32 @@ import (
 func VerifyDestination(w http.ResponseWriter, r *http.Request) {
 	user, ok := utils.GetUserFromContext(r.Context())
 	if !ok {
-		fmt.Printf("Error: User not found\n")
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
 	}
 	destinationIDStr := r.PathValue("id")
 	destinationIDInt, err := strconv.Atoi(destinationIDStr)
 	if err != nil {
-		fmt.Printf("Error: Invalid destination ID - %v\n", err)
 		utils.SendErrorResponse(w, "Invalid destination ID", http.StatusBadRequest)
 		return
 	}
 	destinationID := uint32(destinationIDInt)
 	destination, err := repository.FindDestinationByID(destinationID)
 	if err != nil {
-		fmt.Printf("Error: Destination not found - %v\n", err)
 		utils.SendErrorResponse(w, "Destination not found", http.StatusNotFound)
 		return
 	}
 	if destination.Username != user.Username {
-		fmt.Printf("Error: User not allowed to verify this destination\n")
 		utils.SendErrorResponse(w, "You are not allowed to verify this destination", http.StatusForbidden)
 		return
 	}
 
 	if destination.Verified {
-		fmt.Printf("Info: Destination already verified\n")
 		utils.CreateSendResponse(w, destination, "Destination already verified", http.StatusOK, "destination", user.Username)
 		return
 	}
 
-	destResponse, err := requests.DestinationRequest(`GET`, destination.DestinationEmail, destination.Username, destination.CloudflareDestinationID)
+	destResponse, err := requests.DestinationRequest(`GET`, destination.Domain, destination.Username, destination.CloudflareDestinationID)
 	if err != nil {
 		fmt.Printf("Error: Destination request failed - %v\n", err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
@@ -56,7 +51,6 @@ func VerifyDestination(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if destResponse.Result.Verified.IsZero() {
-		fmt.Printf("Error: Destination not verified, check mail or spam folder\n")
 		utils.SendErrorResponse(w, "Please check your mail or spam folder and click on verify", http.StatusBadRequest)
 		return
 	}
