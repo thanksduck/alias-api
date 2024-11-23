@@ -56,7 +56,7 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 	domain := strings.ToLower(requestBody.Domain)
 
 	// Check if destination already exists
-	destination, err := repository.FindDestinationByEmail(destinationEmail)
+	destination, err := repository.FindDestinationByEmailAndDomain(destinationEmail, domain)
 	if err != nil && err != pgx.ErrNoRows {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Error finding destination", http.StatusInternalServerError)

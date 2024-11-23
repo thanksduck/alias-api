@@ -56,9 +56,14 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 	}
 	domain := strings.Split(alias, "@")[1]
 
-	savedDestination, err := repository.FindDestinationByEmailAndUsername(destination, user.Username)
+	savedDestination, err := repository.FindDestinationByEmailAndDomain(destination, domain)
 	if err != nil {
 		fmt.Println(err)
+		utils.SendErrorResponse(w, "Destination not found", http.StatusNotFound)
+		return
+	}
+
+	if savedDestination.Username != user.Username {
 		utils.SendErrorResponse(w, "Destination not found", http.StatusNotFound)
 		return
 	}
@@ -68,10 +73,6 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if savedDestination.Domain != domain {
-		utils.SendErrorResponse(w, "You are not allowed Create rule for this domain", http.StatusForbidden)
-		return
-	}
 	existingRule, err := repository.FindRuleByAliasEmail(alias)
 	if err != nil && err != pgx.ErrNoRows {
 		utils.SendErrorResponse(w, "Error checking Alias Existence", http.StatusInternalServerError)

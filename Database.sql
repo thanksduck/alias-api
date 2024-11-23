@@ -69,7 +69,7 @@ CREATE TABLE destinations (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
     username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
-    destination_email VARCHAR(255) NOT NULL UNIQUE,
+    destination_email VARCHAR(255) NOT NULL,
     domain VARCHAR(255) NOT NULL,
     cloudflare_destination_id VARCHAR(255) NOT NULL UNIQUE,
     verified BOOLEAN DEFAULT FALSE,
@@ -79,7 +79,7 @@ CREATE TABLE destinations (
 
 CREATE INDEX idx_destinations_user_id ON destinations (user_id);
 CREATE INDEX idx_destinations_username ON destinations (username);
-CREATE INDEX idx_destination_email ON destinations (destination_email);
+CREATE INDEX idx_destination_email_domain ON destinations(destination_email, domain);
 CREATE INDEX idx_domain ON destinations (domain);
 
 -- Create social_profiles table with ON UPDATE CASCADE

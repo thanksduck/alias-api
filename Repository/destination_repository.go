@@ -48,6 +48,26 @@ func FindDestinationByEmail(email string) (*models.Destination, error) {
 	return &destination, nil
 }
 
+func FindDestinationByEmailAndDomain(email, domain string) (*models.Destination, error) {
+	pool := db.GetPool()
+	var destination models.Destination
+	err := pool.QueryRow(context.Background(),
+		`SELECT id, user_id, username, destination_email, domain, cloudflare_destination_id, verified 
+		FROM destinations WHERE destination_email = $1 AND domain = $2`, email, domain).Scan(
+		&destination.ID,
+		&destination.UserID,
+		&destination.Username,
+		&destination.DestinationEmail,
+		&destination.Domain,
+		&destination.CloudflareDestinationID,
+		&destination.Verified,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &destination, nil
+}
+
 func FindDestinationsByUserID(userID uint32) ([]models.Destination, error) {
 	pool := db.GetPool()
 	rows, err := pool.Query(context.Background(),
