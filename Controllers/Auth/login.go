@@ -51,12 +51,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	// Find user by username or email
 	user, err := repository.FindUserByUsernameOrEmail(username, email)
 	if err != nil {
-		utils.SendErrorResponse(w, "Invalid email or password. If you used a social sign-in, please use that method.", http.StatusUnauthorized)
+		utils.SendErrorResponse(w, "Invalid email or password. If you used a social sign-in, Please use that method.", http.StatusUnauthorized)
 		return
 	}
 
 	if !utils.CheckPassword(requestData.Password, user.Password) {
-		utils.SendErrorResponse(w, "Invalid email or password. If you used a social sign-in, please use that method.", http.StatusUnauthorized)
+		utils.SendErrorResponse(w, "Invalid email or password. If you used a social sign-in, Please use that method.", http.StatusUnauthorized)
 		return
 	}
 

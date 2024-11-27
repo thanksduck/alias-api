@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -21,71 +20,64 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
-		utils.SendErrorResponse(w, "Invalid request payload", http.StatusBadRequest)
+		utils.SendSuccessResponse(w, "Reset Link Has Been Sent if it exists. Do check spam folder as well")
 		return
 	}
+
 	requestData.Email = strings.ToLower(requestData.Email)
+
+	// Validate email format first
 	if !middlewares.ValidBody.IsValidEmail(requestData.Email) {
-		utils.SendErrorResponse(w, "Email can't be processed", http.StatusUnprocessableEntity)
+		utils.SendSuccessResponse(w, "Reset Link Has Been Sent if it exists. Do check spam folder as well")
 		return
 	}
 
-	user, err := repository.FindUserByUsernameOrEmail("", requestData.Email)
-	if err != nil {
-		utils.SendErrorResponse(w, "User not found", http.StatusNotFound)
-		return
-	}
+	// Use a goroutine to process email reset asynchronously also not send emails dont inform user if email is not found
+	go func() {
+		// Find user by email (if exists)
+		user, err := repository.FindUserByUsernameOrEmail("", requestData.Email)
+		if err != nil {
+			// If user not found, do nothing silently
+			return
+		}
 
-	err = repository.HasNoActiveResetToken(user.ID)
-	if err != nil {
-		utils.SendErrorResponse(w, "A password reset link was recently sent. Please wait 10 minutes before requesting another one.", http.StatusConflict)
-		return
-	}
+		// Additional checks
+		if !user.EmailVerified {
+			return
+		}
 
-	if !user.EmailVerified {
-		utils.SendErrorResponse(w, "Email not verified", http.StatusForbidden)
-		return
-	}
-	token, err := utils.GeneratePasswordResetToken(user.Username)
-	if err != nil {
-		utils.SendErrorResponse(w, "Error generating Reset Link", http.StatusInternalServerError)
-		return
-	}
-	hash := sha256.New()
+		err = repository.HasNoActiveResetToken(user.ID)
+		if err != nil {
+			return
+		}
 
-	// Write the token to the hash
-	hash.Write([]byte(token))
+		token, err := utils.GeneratePasswordResetToken(user.Username)
+		if err != nil {
+			return
+		}
 
-	// Compute the SHA-256 checksum and get the hashed bytes
-	hashedBytes := hash.Sum(nil)
+		hash := sha256.New()
+		hash.Write([]byte(token))
+		hashedBytes := hash.Sum(nil)
+		hashedToken := hex.EncodeToString(hashedBytes)
 
-	// Convert the hashed bytes to a hexadecimal string
-	hashedToken := hex.EncodeToString(hashedBytes)
+		err = repository.SavePasswordResetToken(user.ID, user.Username, hashedToken)
+		if err != nil {
+			return
+		}
 
-	err = repository.SavePasswordResetToken(user.ID, user.Username, hashedToken)
-	if err != nil {
-		fmt.Println(err)
-		utils.SendErrorResponse(w, "Error Processing Reset Link", http.StatusInternalServerError)
-		return
-	}
-	resetURL := os.Getenv("FRONTEND_HOST") + "/reset-password/" + hashedToken
-	message := "Dear " + user.Name + "\n\n" +
-		"You have requested to reset your password. Please click on the link below to reset your password. This link is valid for 10 minutes.\n\n" +
-		resetURL + "\n\n" +
-		"Thank you,\n" +
-		"One Alias Service Team"
+		resetURL := os.Getenv("FRONTEND_HOST") + "/reset-password/" + hashedToken
+		message := "Dear " + user.Name + "\n\n" +
+			"You have requested to reset your password. Please click on the link below to reset your password. This link is valid for 10 minutes.\n\n" +
+			resetURL + "\n\n" +
+			"Thank you,\n" +
+			"One Alias Service Team"
 
-	err = utils.SendEmail(requestData.Email, "Password Reset Link", message)
-	if err != nil {
-		utils.SendErrorResponse(w, "Error sending email", http.StatusInternalServerError)
-		return
-	}
+		utils.SendEmail(requestData.Email, "Password Reset Link", message)
+	}()
 
-	// send ok response with message that email has been sent and close the connection and it must be in json
-	response := map[string]string{"message": "Password reset link has been sent to your email", "status": "success"}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	// Always send the same response, regardless of user existence
+	utils.SendSuccessResponse(w, "Reset Link Has Been Sent if it exists. Do check spam folder as well")
 }
 
 /*

@@ -84,3 +84,13 @@ func CreateSendResponse(w http.ResponseWriter, data interface{}, message string,
 	w.WriteHeader(statusCode)
 	w.Write(buf.Bytes())
 }
+
+func SendSuccessResponse(w http.ResponseWriter, message string) {
+	response := map[string]string{
+		"message": message,
+		"status":  "success",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
+}
