@@ -49,6 +49,7 @@ func CreateRuleRequest(method, alias, destination, username, domain string) erro
 	default:
 		url = fmt.Sprintf("%s/%s/%s", ruleURL, domain, alias)
 	}
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("error marshaling data: %v", err)
@@ -69,10 +70,27 @@ func CreateRuleRequest(method, alias, destination, username, domain string) erro
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+	// Handle specific status codes
+	switch resp.StatusCode {
+	case http.StatusOK, http.StatusCreated, http.StatusNoContent:
+		return nil
+	case http.StatusConflict: // 409 Conflict
+		body, _ := io.ReadAll(resp.Body)
+		var errorResp struct {
+			Success bool   `json:"success"`
+			Error   string `json:"error"`
+		}
+
+		// Try to parse the error response
+		jsonErr := json.Unmarshal(body, &errorResp)
+		if jsonErr == nil && !errorResp.Success {
+			return fmt.Errorf(errorResp.Error)
+		}
+
+		fmt.Println("Error response:", string(body))
+		return fmt.Errorf("something went wrong")
+	default:
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("unexpected status code: %d, body: %s", resp.StatusCode, string(body))
 	}
-
-	return nil
 }
