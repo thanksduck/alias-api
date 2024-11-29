@@ -95,7 +95,7 @@ func CreateRule(w http.ResponseWriter, r *http.Request) {
 	err = requests.CreateRuleRequest(`POST`, newRule.AliasEmail, newRule.DestinationEmail, newRule.Username, domain)
 	if err != nil {
 		fmt.Println(err)
-		utils.SendErrorResponse(w, fmt.Sprint(err), http.StatusInternalServerError)
+		utils.SendErrorResponse(w, fmt.Sprintf("%s already taken,Please Choose Other Email", newRule.AliasEmail), http.StatusInternalServerError)
 		return
 	}
 	_, err = repository.CreateNewRule(newRule)
