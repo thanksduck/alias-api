@@ -6,24 +6,25 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
 	"time"
 
 	"github.com/thanksduck/alias-api/cfconfig"
 )
 
+type DestinationResult struct {
+	Created  time.Time `json:"created"`
+	Email    string    `json:"email"`
+	ID       string    `json:"id"`
+	Modified time.Time `json:"modified"`
+	Tag      string    `json:"tag"`
+	Verified time.Time `json:"verified"`
+}
+
 type DestinationResponse struct {
-	Errors   []interface{} `json:"errors"`
-	Messages []interface{} `json:"messages"`
-	Success  bool          `json:"success"`
-	Result   *struct {
-		Created  time.Time `json:"created"`
-		Email    string    `json:"email"`
-		ID       string    `json:"id"`
-		Modified time.Time `json:"modified"`
-		Tag      string    `json:"tag"`
-		Verified time.Time `json:"verified"`
-	} `json:"result"`
+	Errors   []interface{}     `json:"errors"`
+	Messages []interface{}     `json:"messages"`
+	Success  bool              `json:"success"`
+	Result   DestinationResult `json:"result"`
 }
 
 func DestinationRequest(method, domain, destination, cfId string) (*DestinationResponse, error) {
