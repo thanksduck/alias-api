@@ -10,6 +10,7 @@ import (
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	repository "github.com/thanksduck/alias-api/Repository"
+	template "github.com/thanksduck/alias-api/Template"
 	"github.com/thanksduck/alias-api/utils"
 )
 
@@ -66,14 +67,9 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		resetURL := os.Getenv("FRONTEND_HOST") + "/reset-password/" + hashedToken
-		message := "Dear " + user.Name + "\n\n" +
-			"You have requested to reset your password. Please click on the link below to reset your password. This link is valid for 10 minutes.\n\n" +
-			resetURL + "\n\n" +
-			"Thank you,\n" +
-			"One Alias Service Team"
-
-		utils.SendEmail(requestData.Email, "Password Reset Link", message)
+		resetLink := os.Getenv("FRONTEND_HOST") + "/reset-password/" + hashedToken
+		htmlBody, textBody := template.ForgetPasswordTemplate(user.Name, resetLink)
+		utils.SendEmail(requestData.Email, "Password Reset Link | One Alias Service", htmlBody, textBody)
 	}()
 
 	// Always send the same response, regardless of user existence

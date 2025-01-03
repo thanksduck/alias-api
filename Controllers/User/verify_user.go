@@ -9,6 +9,7 @@ import (
 
 	auth "github.com/thanksduck/alias-api/Controllers/Auth"
 	repository "github.com/thanksduck/alias-api/Repository"
+	template "github.com/thanksduck/alias-api/Template"
 	"github.com/thanksduck/alias-api/utils"
 )
 
@@ -48,30 +49,18 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	verificationLink := fmt.Sprintf("%s/api/v2/user/%s/verify/%s", os.Getenv("REDIRECT_HOST"), user.Username, token)
-	emailBody := fmt.Sprintf(`Dear %s,
+	magicLink := fmt.Sprintf("%s/api/v2/user/%s/verify/%s", os.Getenv("REDIRECT_HOST"), user.Username, token)
 
-We hope this email finds you well. Thank you for choosing One Alias Service.
+	htmlBody, textBody := template.VerifyEmailTemplate(user.Name, magicLink)
 
-Please verify your email address by clicking on the link below:
-
-%s
-
-If you didn't request this verification, please disregard this email. Your account security is important to us.
-
-Thank you for your trust in One Alias Service. We're here to assist you with any questions or concerns.
-
-Best regards,
-The One Alias Service Team`, user.Name, verificationLink)
-
-	err = utils.SendEmail(user.Email, "Verify Your Email", emailBody)
+	err = utils.SendEmail(user.Email, "Verify Your Email", htmlBody, textBody)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Error sending email", http.StatusInternalServerError)
 		return
 	}
 
-	utils.CreateSendResponse(w, user, "Verification email sent, please Check Your Spam as well", http.StatusOK, "user", user.Username)
+	utils.CreateSendResponse(w, user, "Magic verification link sent, please Check Your Spam as well", http.StatusOK, "user", user.Username)
 }
 
 func VerifyUser(w http.ResponseWriter, r *http.Request) {
