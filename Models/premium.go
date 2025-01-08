@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type PlanType string
 type StatusType string
 
@@ -16,10 +18,14 @@ const (
 )
 
 type Premium struct {
-	ID        string     `json:"id"`
-	UserID    string     `json:"user_id"`
-	Plan      PlanType   `json:"plan"`
-	Status    StatusType `json:"status"`
-	CreatedAt string     `json:"created_at"`
-	UpdatedAt string     `json:"updated_at"`
+	ID             uint32     `json:"-"`
+	UserID         uint32     `json:"-"`
+	SubscriptionID string     `json:"subscriptionId"`
+	Username       string     `json:"username"`
+	Mobile         string     `json:"mobile"`
+	Plan           PlanType   `json:"plan"`
+	Status         StatusType `json:"status"`
+	Gateway        string     `json:"gateway"`
+	CreatedAt      time.Time  `json:"-"`
+	UpdatedAt      time.Time  `json:"-"`
 }

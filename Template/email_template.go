@@ -15,7 +15,7 @@ func VerifyEmailTemplate(name, magicLink string) (htmlBody, textBody string) {
 		  <tbody>
 			<tr style="width:100%%">
 			  <td>
-				<img alt="Raycast" height="48" src="https://static.20032003.xyz/1as/1as-logo.png" style="display:block;outline:none;border:none;text-decoration:none" width="73" />
+				<img alt="One Alias Service" height="48" src="https://static.20032003.xyz/1as/1as-logo.png" style="display:block;outline:none;border:none;text-decoration:none" width="73" />
 				<h1 style="font-size:28px;font-weight:bold;margin-top:48px">🪄 Dear %s, Your magic verification link</h1>
 				<table align="center" width="100%%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:24px 0">
 				  <tbody>
@@ -31,7 +31,7 @@ func VerifyEmailTemplate(name, magicLink string) (htmlBody, textBody string) {
 				</table>
 				<p style="font-size:16px;line-height:26px;margin:16px 0">Best,<br />- One Alias Service Team</p>
 				<hr style="width:100%%;border:none;border-top:1px solid #eaeaea;border-color:#dddddd;margin-top:48px" />
-				<img height="32" src="https://static.20032003.xyz/1as/1as-logo.png" style="display:block;outline:none;border:none;text-decoration:none;-webkit-filter:grayscale(100%%);filter:grayscale(100%%);margin:20px 0" width="48" />
+				<img height="32" alt="1@S" src="https://static.20032003.xyz/1as/1as-logo.png" style="display:block;outline:none;border:none;text-decoration:none;-webkit-filter:grayscale(100%%);filter:grayscale(100%%);margin:20px 0" width="48" />
 				<p style="font-size:12px;line-height:24px;margin:16px 0;color:#8898aa;margin-left:4px">One Alias Service</p>
 				<p style="font-size:12px;line-height:24px;margin:16px 0;color:#8898aa;margin-left:4px">Central Vista, Sector 17, Chandigarh, 160017</p>
 			  </td>

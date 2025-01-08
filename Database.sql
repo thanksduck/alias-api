@@ -123,3 +123,20 @@ CREATE TABLE custom_domains_dns_records (
 );
 
 CREATE INDEX idx_custom_domains_dns_records_custom_domain_id ON custom_domains_dns_records (custom_domain_id);
+
+-- Create Premium Table
+CREATE TABLE premium (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
+    subscription_id VARCHAR(255) NOT NULL,
+    plan VARCHAR(10) 
+    mobile VARCHAR(15)
+    status VARCHAR(10) NOT NULL CHECK (status IN ('active', 'inactive', 'pending')),
+    gateway VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_premium_username ON premium (username);
+CREATE INDEX idx_premium_subscription_id ON premium (subscription_id);

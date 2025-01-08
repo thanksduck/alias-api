@@ -24,8 +24,8 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Please Verify Your Email to add Destination", http.StatusForbidden)
 		return
 	}
-	if user.DestinationCount == 1 && !user.IsPremium {
-		utils.SendErrorResponse(w, "You have Reached the Destination Limit", http.StatusPaymentRequired)
+	if user.DestinationCount >= 1 && !user.IsPremium {
+		utils.SendPaymentRequiredResponse(w, "For more Destinations go premium", "Free", 1)
 		return
 	}
 

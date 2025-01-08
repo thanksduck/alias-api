@@ -19,6 +19,13 @@ type ErrorResponse struct {
 	Message string `json:"message"`
 }
 
+type PaymentRequiredResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+	Plan    string `json:"plan"`
+	Limit   int    `json:"limit"`
+}
+
 func SendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 	response := ErrorResponse{
 		Status:  "fail",
@@ -36,6 +43,28 @@ func SendErrorResponse(w http.ResponseWriter, message string, statusCode int) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
+	w.Write(buf.Bytes())
+}
+
+func SendPaymentRequiredResponse(w http.ResponseWriter, message string, plan string, limit int) {
+	response := PaymentRequiredResponse{
+		Status:  "fail",
+		Message: message,
+		Plan:    plan,
+		Limit:   limit,
+	}
+
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	if err := json.NewEncoder(buf).Encode(response); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusPaymentRequired)
 	w.Write(buf.Bytes())
 }
 
