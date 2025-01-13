@@ -20,6 +20,26 @@ CREATE TABLE users (
 
 CREATE INDEX idx_username ON users (username);
 CREATE INDEX idx_email ON users (email);
+
+-- Create rules table
+CREATE TABLE rules (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
+    alias_email VARCHAR(255) UNIQUE NOT NULL,
+    destination_email VARCHAR(255) NOT NULL,
+    active BOOLEAN DEFAULT TRUE,
+    comment VARCHAR(255),
+    name VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_rules_user_id ON rules (user_id);
+CREATE INDEX idx_rules_username ON rules (username); 
+CREATE INDEX idx_alias_email ON rules (alias_email);
+
+
 -- Create user_tokens table
 CREATE TABLE user_tokens (
     id SERIAL PRIMARY KEY,
@@ -130,8 +150,8 @@ CREATE TABLE premium (
     user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
     username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
     subscription_id VARCHAR(255) NOT NULL,
-    plan VARCHAR(10) 
-    mobile VARCHAR(15)
+    plan VARCHAR(10), 
+    mobile VARCHAR(15),
     status VARCHAR(10) NOT NULL CHECK (status IN ('active', 'inactive', 'pending')),
     gateway VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

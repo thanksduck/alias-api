@@ -20,12 +20,14 @@ const (
 type Premium struct {
 	ID             uint32     `json:"-"`
 	UserID         uint32     `json:"-"`
-	SubscriptionID string     `json:"subscriptionId"`
+	SubscriptionID string     `json:"suid"`
 	Username       string     `json:"username"`
 	Mobile         string     `json:"mobile"`
 	Plan           PlanType   `json:"plan"`
 	Status         StatusType `json:"status"`
 	Gateway        string     `json:"gateway"`
+	TransactionID  string     `json:"txnid"`
+	MerchentUserID string     `json:"muid"`
 	CreatedAt      time.Time  `json:"-"`
 	UpdatedAt      time.Time  `json:"-"`
 }

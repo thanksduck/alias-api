@@ -10,30 +10,6 @@ import (
 	models "github.com/thanksduck/alias-api/Models"
 )
 
-func GetPremiumByUsername(username string) ([]models.Premium, error) {
-	pool := db.GetPool()
-	rows, err := pool.Query(context.Background(),
-		`SELECT id, user_id, username, subscription_id, plan, mobile, status, gateway, created_at, updated_at 
-		 FROM premium WHERE username = $1`, username)
-	if err != nil {
-		return nil, fmt.Errorf("error querying premium: %w", err)
-	}
-	defer rows.Close()
-
-	var premiums []models.Premium
-	for rows.Next() {
-		var premium models.Premium
-		err := rows.Scan(&premium.ID, &premium.UserID, &premium.Username, &premium.SubscriptionID,
-			&premium.Plan, &premium.Mobile, &premium.Status, &premium.Gateway,
-			&premium.CreatedAt, &premium.UpdatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("error scanning premium: %w", err)
-		}
-		premiums = append(premiums, premium)
-	}
-	return premiums, nil
-}
-
 func GetActivePremiumByUsername(username string) (*models.Premium, error) {
 	pool := db.GetPool()
 	var premium models.Premium
@@ -74,6 +50,14 @@ func CreateSubscription(username string, subscriptionID string, plan models.Plan
 	}
 	defer tx.Rollback(context.Background())
 
+	// Get user ID first
+	var userID uint32
+	err = tx.QueryRow(context.Background(),
+		`SELECT id FROM users WHERE username = $1`, username).Scan(&userID)
+	if err != nil {
+		return fmt.Errorf("error getting user ID: %w", err)
+	}
+
 	// First update any existing active subscriptions to inactive
 	_, err = tx.Exec(context.Background(),
 		`UPDATE premium SET status = 'inactive', updated_at = $1 
@@ -85,9 +69,9 @@ func CreateSubscription(username string, subscriptionID string, plan models.Plan
 
 	// Create new subscription
 	_, err = tx.Exec(context.Background(),
-		`INSERT INTO premium (username, subscription_id, plan, mobile, status, gateway)
-		 VALUES ($1, $2, $3, $4, 'active', $5)`,
-		username, subscriptionID, plan, mobile, gateway)
+		`INSERT INTO premium (username, user_id, subscription_id, plan, mobile, status, gateway)
+		 VALUES ($1, $2, $3, $4, $5, 'active', $6)`,
+		username, userID, subscriptionID, plan, mobile, gateway)
 	if err != nil {
 		return fmt.Errorf("error creating subscription: %w", err)
 	}
