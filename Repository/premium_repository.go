@@ -42,21 +42,13 @@ func GetPlanByUsername(username string) (models.PlanType, error) {
 	return plan, nil
 }
 
-func CreateSubscription(username string, subscriptionID string, plan models.PlanType, mobile string, gateway string) error {
+func CreateSubscription(username string, userID uint32, subscriptionID string, plan models.PlanType, mobile string, gateway models.GatewayType) error {
 	pool := db.GetPool()
 	tx, err := pool.Begin(context.Background())
 	if err != nil {
 		return fmt.Errorf("error starting transaction: %w", err)
 	}
 	defer tx.Rollback(context.Background())
-
-	// Get user ID first
-	var userID uint32
-	err = tx.QueryRow(context.Background(),
-		`SELECT id FROM users WHERE username = $1`, username).Scan(&userID)
-	if err != nil {
-		return fmt.Errorf("error getting user ID: %w", err)
-	}
 
 	// First update any existing active subscriptions to inactive
 	_, err = tx.Exec(context.Background(),
