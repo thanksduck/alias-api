@@ -8,8 +8,8 @@ import (
 	"os"
 
 	auth "github.com/thanksduck/alias-api/Controllers/Auth"
+	emailtemplate "github.com/thanksduck/alias-api/Email_Template"
 	repository "github.com/thanksduck/alias-api/Repository"
-	template "github.com/thanksduck/alias-api/Template"
 	"github.com/thanksduck/alias-api/utils"
 )
 
@@ -51,7 +51,7 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 
 	magicLink := fmt.Sprintf("%s/api/v2/user/%s/verify/%s", os.Getenv("REDIRECT_HOST"), user.Username, token)
 
-	htmlBody, textBody := template.VerifyEmailTemplate(user.Name, magicLink)
+	htmlBody, textBody := emailtemplate.VerifyEmailTemplate(user.Name, magicLink)
 
 	err = utils.SendEmail(user.Email, "Verify Your Email", htmlBody, textBody)
 	if err != nil {

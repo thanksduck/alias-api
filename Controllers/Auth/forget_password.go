@@ -8,9 +8,9 @@ import (
 	"os"
 	"strings"
 
+	emailtemplate "github.com/thanksduck/alias-api/Email_Template"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	repository "github.com/thanksduck/alias-api/Repository"
-	template "github.com/thanksduck/alias-api/Template"
 	"github.com/thanksduck/alias-api/utils"
 )
 
@@ -68,7 +68,7 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 		}
 
 		resetLink := os.Getenv("FRONTEND_HOST") + "/reset-password/" + hashedToken
-		htmlBody, textBody := template.ForgetPasswordTemplate(user.Name, resetLink)
+		htmlBody, textBody := emailtemplate.ForgetPasswordTemplate(user.Name, resetLink)
 		utils.SendEmail(requestData.Email, "Password Reset Link | One Alias Service", htmlBody, textBody)
 	}()
 
