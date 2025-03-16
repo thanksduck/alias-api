@@ -126,7 +126,7 @@ func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *mode
 		Type:    "credit",
 		Gateway: "phonepe",
 		TxnID:   txnID,
-		Amount:  int64((amount / 100) * requestBody.Months),
+		Amount:  int64(amount / 100),
 		Status:  "pending",
 	}
 

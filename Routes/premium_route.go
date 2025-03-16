@@ -9,6 +9,6 @@ import (
 
 func PremiumRouter(mux *http.ServeMux) {
 
-	mux.HandleFunc("POST /api/pay", middlewares.Protect(premium.CreatePayment))
+	mux.HandleFunc("POST /api/v2/premium/init", middlewares.Protect(premium.CreatePayment))
 
 }
