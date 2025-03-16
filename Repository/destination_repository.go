@@ -117,36 +117,6 @@ func FindDestinationByEmailAndUsername(email, username string) (*models.Destinat
 	return &destination, nil
 }
 
-func FindDestinationsByUsername(username string) ([]models.Destination, error) {
-	pool := db.GetPool()
-	rows, err := pool.Query(context.Background(),
-		`SELECT id, user_id, username, destination_email, domain, cloudflare_destination_id, verified 
-		FROM destinations WHERE username = $1`, username)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var destinations []models.Destination
-	for rows.Next() {
-		var destination models.Destination
-		err := rows.Scan(
-			&destination.ID,
-			&destination.UserID,
-			&destination.Username,
-			&destination.DestinationEmail,
-			&destination.Domain,
-			&destination.CloudflareDestinationID,
-			&destination.Verified,
-		)
-		if err != nil {
-			return nil, err
-		}
-		destinations = append(destinations, destination)
-	}
-	return destinations, nil
-}
-
 func CreateDestination(destination *models.Destination) (*models.Destination, error) {
 	pool := db.GetPool()
 	tx, err := pool.Begin(context.Background())

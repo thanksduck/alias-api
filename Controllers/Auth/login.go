@@ -59,11 +59,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid email or password. If you used a social sign-in, Please use that method.", http.StatusUnauthorized)
 		return
 	}
-	if user.IsPremium {
-		plan, _ := repository.GetPlanByUsername(user.Username)
-		user.Plan = plan
-	}
-
+	/*
+		if user.IsPremium {
+			plan, _ := repository.GetPlanByUsername(user.Username)
+			user.Plan = plan
+		}
+	*/
 	utils.CreateSendResponse(w, user, "Login Successful", http.StatusOK, "user", user.Username)
 
 }

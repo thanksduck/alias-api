@@ -12,7 +12,6 @@ CREATE TABLE users (
     provider VARCHAR(255),
     avatar VARCHAR(500),
     password_changed_at TIMESTAMP,
-   
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -36,23 +35,6 @@ CREATE TABLE rules (
 );
 
 CREATE INDEX idx_rules_user_id ON rules (user_id);
-CREATE INDEX idx_rules_username ON rules (username); 
-CREATE INDEX idx_alias_email ON rules (alias_email);
-
-
--- Create user_tokens table
-CREATE TABLE user_tokens (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
-     username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
-    token VARCHAR(255) NOT NULL,
-    type VARCHAR(255) NOT NULL,
-    active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- CREATE INDEX idx_user_id ON user_tokens (user_id);
 
 -- Create user_auth table
 CREATE TABLE user_auth (
@@ -66,23 +48,6 @@ CREATE TABLE user_auth (
 );
 
 CREATE INDEX idx_user_auth_user_id ON user_auth (user_id);
-CREATE INDEX idx_user_auth_username ON user_auth (username);
-
-
--- Create the user_auth table with the required schema
-CREATE TABLE user_auth (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
-    username VARCHAR(15) NOT NULL REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
-    password_reset_token VARCHAR(255),
-    password_reset_expires TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_rules_user_id ON rules (user_id);
-CREATE INDEX idx_rules_username ON rules (username);
-CREATE INDEX idx_alias_email ON rules (alias_email);
 
 -- Create destinations table with ON UPDATE CASCADE
 CREATE TABLE destinations (
@@ -98,8 +63,6 @@ CREATE TABLE destinations (
 );
 
 CREATE INDEX idx_destinations_user_id ON destinations (user_id);
-CREATE INDEX idx_destinations_username ON destinations (username);
-CREATE INDEX idx_destination_email_domain ON destinations(destination_email, domain);
 CREATE INDEX idx_domain ON destinations (domain);
 
 -- Create social_profiles table with ON UPDATE CASCADE
@@ -115,48 +78,45 @@ CREATE TABLE social_profiles (
 );
 
 CREATE INDEX idx_social_profiles_user_id ON social_profiles (user_id);
-CREATE INDEX idx_social_profiles_username ON social_profiles (username);
 
--- Create custom_domains table with ON UPDATE CASCADE
-CREATE TABLE custom_domains (
+CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
-    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
-    domain VARCHAR(255) NOT NULL UNIQUE
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    type VARCHAR(20) DEFAULT 'credit',
+    gateway VARCHAR(50) DEFAULT 'phonepe',
+    txn_id TEXT UNIQUE NOT NULL,
+    amount BIGINT NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('success', 'pending', 'failed')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_custom_domains_user_id ON custom_domains (user_id);
-CREATE INDEX idx_custom_domains_username ON custom_domains (username);
+CREATE INDEX idx_payments_user_id ON payments(user_id);
+CREATE INDEX idx_payments_status ON payments(status);
 
--- Create custom_domains_dns_records table
-CREATE TABLE custom_domains_dns_records (
+CREATE TABLE credits (
     id SERIAL PRIMARY KEY,
-    custom_domain_id INTEGER REFERENCES custom_domains(id),
-    cloudflare_id VARCHAR(50) NOT NULL UNIQUE,
-    type VARCHAR(20) NOT NULL,
-    name VARCHAR(20) NOT NULL,
-    content VARCHAR(255) NOT NULL,
-    ttl INTEGER NOT NULL,
-    priority INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    balance BIGINT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_custom_domains_dns_records_custom_domain_id ON custom_domains_dns_records (custom_domain_id);
+CREATE INDEX idx_credits_user_id ON credits(user_id);
+CREATE INDEX idx_credits_balance ON credits(balance);
 
--- Create Premium Table
-CREATE TABLE premium (
+CREATE TABLE subscriptions (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
-    username VARCHAR(15) REFERENCES users(username) ON UPDATE CASCADE ON DELETE CASCADE,
-    subscription_id VARCHAR(255) NOT NULL,
-    plan VARCHAR(10), 
-    mobile VARCHAR(15),
-    status VARCHAR(10) NOT NULL CHECK (status IN ('active', 'inactive', 'pending')),
-    gateway VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    credit_id INTEGER REFERENCES credits(id) ON DELETE SET NULL ON UPDATE CASCADE,
+    plan VARCHAR(10) CHECK (plan IN ('star', 'free', 'galaxy')),
+    price INTEGER NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL,
+    status VARCHAR(10) CHECK (status IN ('active', 'paused', 'cancelled'))
 );
 
-CREATE INDEX idx_premium_username ON premium (username);
-CREATE INDEX idx_premium_subscription_id ON premium (subscription_id);
+CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX idx_subscriptions_status ON subscriptions(status);

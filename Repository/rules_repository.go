@@ -45,27 +45,6 @@ func FindRulesByUserID(userID uint32) ([]models.Rule, error) {
 	return rules, nil
 }
 
-func FindRulesByUsername(username string) ([]models.Rule, error) {
-	pool := db.GetPool()
-	rows, err := pool.Query(context.Background(),
-		`SELECT id, user_id, username, alias_email, destination_email, active, comment,name FROM rules WHERE username = $1`, username)
-	if err != nil {
-		return nil, fmt.Errorf("error querying rules: %w", err)
-	}
-	defer rows.Close()
-
-	var rules []models.Rule
-	for rows.Next() {
-		var rule models.Rule
-		err := rows.Scan(&rule.ID, &rule.UserID, &rule.Username, &rule.AliasEmail, &rule.DestinationEmail, &rule.Active, &rule.Comment, &rule.Name)
-		if err != nil {
-			return nil, fmt.Errorf("error scanning rule: %w", err)
-		}
-		rules = append(rules, rule)
-	}
-	return rules, nil
-}
-
 func FindRulesByDestinationEmail(destinationEmail string) ([]models.Rule, error) {
 	pool := db.GetPool()
 	rows, err := pool.Query(context.Background(),
