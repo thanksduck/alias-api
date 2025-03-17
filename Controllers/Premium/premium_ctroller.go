@@ -2,6 +2,7 @@ package premium
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
@@ -28,6 +29,7 @@ func CreatePayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	url, err := paymentutils.InitialisePaymentAndRedirect(&requestBody, user)
+	fmt.Printf("%v", err)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return

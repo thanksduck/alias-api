@@ -11,7 +11,7 @@ func InitialisePayment(payment *models.Payment) error {
 	pool := db.GetPool()
 	_, err := pool.Exec(context.Background(),
 		`INSERT INTO payments (user_id, type, gateway, txn_id, amount, status) 
-		VALUES ($1, $2, $3, $4, $5, $6,)`,
+		VALUES ($1, $2, $3, $4, $5, $6)`,
 		payment.UserID,
 		payment.Type,
 		payment.Gateway,

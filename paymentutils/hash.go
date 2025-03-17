@@ -27,7 +27,6 @@ func hashString(input string) string {
 func GenerateXVerifyHeader(base64Payload string, endpoint string) string {
 	saltKey := os.Getenv("PHONEPE_SALT")
 	saltIndex := os.Getenv("PHONEPE_SALT_INDEX")
-	fmt.Printf("Salt key: %s, Salt index: %s\n", saltKey, saltIndex)
 	hash := hashString(base64Payload + endpoint + saltKey)
 	return fmt.Sprintf("%s###%s", hash, saltIndex)
 }
@@ -57,7 +56,7 @@ func GetPhonePeBaseURL() string {
 	if os.Getenv("GO_ENV") == "production" {
 		return PhonePeProdBaseURL
 	}
-	return PhonePeSandboxBaseURL
+	return PhonePeProdBaseURL
 }
 
 // GenerateOASHash generates a hash for OAS verification
