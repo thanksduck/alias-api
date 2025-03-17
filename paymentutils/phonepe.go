@@ -44,6 +44,23 @@ type PhonePePaymentResponse struct {
 		} `json:"instrumentResponse"`
 	} `json:"data"`
 }
+type PhonePeStatusResponse struct {
+	Success bool   `json:"success"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Data    struct {
+		MerchantID            string `json:"merchantId"`
+		MerchantTransactionID string `json:"merchantTransactionId"`
+		TransactionID         string `json:"transactionId"`
+		Amount                int64  `json:"amount"`
+		State                 string `json:"state"`
+		ResponseCode          string `json:"responseCode"`
+		PaymentInstrument     struct {
+			Type string `json:"type"`
+			// Additional fields based on payment type
+		} `json:"paymentInstrument"`
+	} `json:"data"`
+}
 
 func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *models.User) (url string, err error) {
 	merchantID := os.Getenv("PHONEPE_MERCHENT_ID")
@@ -56,7 +73,7 @@ func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *mode
 		MerchantTransactionID: txnID,
 		MerchantUserID:        user.Username,
 		Amount:                amount,
-		RedirectURL:           fmt.Sprintf("%s/pay/cb?txnid=%s", os.Getenv("FRONTEND_HOST"), txnID),
+		RedirectURL:           fmt.Sprintf("%s/pay/cb?txnid=%s&plan=%s", os.Getenv("FRONTEND_HOST"), txnID, requestBody.Plan),
 		CallbackURL:           fmt.Sprintf("%s/webhook/phonepay", os.Getenv("REDIRECT_HOST")),
 		RedirectMode:          "REDIRECT",
 	}
@@ -136,4 +153,73 @@ func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *mode
 	}
 
 	return redirectURL, nil
+}
+
+// VerifyPhonePePayment verifies payment status with PhonePe and returns payment status
+func VerifyPhonePePayment(txnID string) (string, error) {
+	payment, err := repository.FindPaymentByTxnID(txnID)
+	if err != nil {
+		return "", fmt.Errorf("failed to find payment record: %w", err)
+	}
+
+	merchantID := os.Getenv("PHONEPE_MERCHENT_ID")
+	endpoint := fmt.Sprintf("/pg/v1/status/%s/%s", merchantID, txnID)
+	reqURL := GetPhonePeBaseURL() + endpoint
+
+	// Create the request
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Generate X-VERIFY header
+	xverify := hashString(endpoint+os.Getenv("PHONEPE_SALT")) + "###" + os.Getenv("PHONEPE_SALT_INDEX")
+
+	// Add required headers
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("X-VERIFY", xverify)
+	req.Header.Add("X-MERCHANT-ID", merchantID)
+
+	// Make the request
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Parse response
+	var statusResp PhonePeStatusResponse
+	if err := json.Unmarshal(body, &statusResp); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	// Determine payment status based on response
+	var paymentStatus string
+
+	switch statusResp.Code {
+	case "PAYMENT_SUCCESS":
+		paymentStatus = "SUCCESS"
+	case "PAYMENT_ERROR", "PAYMENT_DECLINED", "TIMED_OUT":
+		paymentStatus = "FAILED"
+	case "PAYMENT_PENDING":
+		paymentStatus = "PENDING"
+	case "INTERNAL_SERVER_ERROR", "BAD_REQUEST", "AUTHORIZATION_FAILED", "TRANSACTION_NOT_FOUND":
+		return "", fmt.Errorf("payment verification error: %s - %s", statusResp.Code, statusResp.Message)
+	default:
+		return "", fmt.Errorf("unknown response code: %s", statusResp.Code)
+	}
+
+	// Update payment with status
+	payment.Status = paymentStatus
+
+	return paymentStatus, nil
 }
