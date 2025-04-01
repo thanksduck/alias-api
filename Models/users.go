@@ -12,8 +12,8 @@ type User struct {
 	EmailVerified     bool      `json:"emailVerified"`
 	AliasCount        int       `json:"aliasCount"`
 	DestinationCount  int       `json:"destinationCount"`
-	IsPremium         bool      `json:"-"`
-	Plan              PlanType  `json:"plan,omitempty"`
+	IsPremium         bool      `json:"isPremium"`
+	Plan              *PlanType `json:"plan,omitempty"`
 	Password          string    `json:"-"`
 	Provider          string    `json:"-"`
 	Avatar            string    `json:"avatar,omitempty"`

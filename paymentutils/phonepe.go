@@ -12,6 +12,7 @@ import (
 
 	models "github.com/thanksduck/alias-api/Models"
 	repository "github.com/thanksduck/alias-api/Repository"
+	"resty.dev/v3"
 )
 
 type PhonePePaymentRequest struct {
@@ -155,51 +156,35 @@ func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *mode
 	return redirectURL, nil
 }
 
-// VerifyPhonePePayment verifies payment status with PhonePe and returns payment status
 func VerifyPhonePePayment(txnID string) (string, error) {
-	payment, err := repository.FindPaymentByTxnID(txnID)
-	if err != nil {
-		return "", fmt.Errorf("failed to find payment record: %w", err)
-	}
-
+	client := resty.New()
+	defer client.Close()
 	merchantID := os.Getenv("PHONEPE_MERCHENT_ID")
 	endpoint := fmt.Sprintf("/pg/v1/status/%s/%s", merchantID, txnID)
-	reqURL := GetPhonePeBaseURL() + endpoint
-
-	// Create the request
-	req, err := http.NewRequest("GET", reqURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
 
 	// Generate X-VERIFY header
 	xverify := hashString(endpoint+os.Getenv("PHONEPE_SALT")) + "###" + os.Getenv("PHONEPE_SALT_INDEX")
-
-	// Add required headers
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("X-VERIFY", xverify)
-	req.Header.Add("X-MERCHANT-ID", merchantID)
+	baseURL := GetPhonePeBaseURL()
 
 	// Make the request
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
-	resp, err := client.Do(req)
+	resp, err := client.R().
+		SetHeader("Content-Type", "application/json").
+		SetHeader("X-MERCHANT-ID", merchantID).
+		SetHeader("X-VERIFY", xverify).
+		SetResult(&PhonePeStatusResponse{}).
+		Get(baseURL + endpoint)
+
 	if err != nil {
 		return "", fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
 
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
+	if resp.IsError() {
+		return "", fmt.Errorf("received error response: %s", resp.String())
 	}
 
-	// Parse response
-	var statusResp PhonePeStatusResponse
-	if err := json.Unmarshal(body, &statusResp); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
+	statusResp, ok := resp.Result().(*PhonePeStatusResponse)
+	if !ok || statusResp == nil {
+		return "", fmt.Errorf("failed to parse response")
 	}
 
 	// Determine payment status based on response
@@ -217,9 +202,6 @@ func VerifyPhonePePayment(txnID string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown response code: %s", statusResp.Code)
 	}
-
-	// Update payment with status
-	payment.Status = paymentStatus
 
 	return paymentStatus, nil
 }

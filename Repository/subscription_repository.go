@@ -29,7 +29,7 @@ func FindPaymentByTxnID(txnID string) (*models.Payment, error) {
 	pool := db.GetPool()
 	var payment models.Payment
 	err := pool.QueryRow(context.Background(),
-		`SELECT id, user_id, type, gateway, txn_id, external_id, amount, status, created_at, updated_at 
+		`SELECT id, user_id, type, gateway, txn_id,  amount, status, created_at, updated_at 
 		FROM payments WHERE txn_id = $1`, txnID).Scan(
 		&payment.ID,
 		&payment.UserID,
@@ -107,5 +107,45 @@ func UpdatePaymentStatusCreditAndCreateSubscription(subscription *models.Subscri
 		return err
 	}
 
+	// Update user to premium status
+	_, err = tx.Exec(context.Background(),
+		`UPDATE users SET is_premium = true WHERE id = $1`,
+		subscription.UserID)
+	if err != nil {
+		return err
+	}
+
 	return tx.Commit(context.Background())
+}
+
+func GetPlanByUserID(UserID uint32) (*models.PlanType, error) {
+	pool := db.GetPool()
+	var plan models.PlanType
+	err := pool.QueryRow(context.Background(), `SELECT plan from subscriptions where user_id = $1`, UserID).Scan(&plan)
+	if err != nil {
+		return nil, err
+	}
+	return &plan, nil
+}
+
+func GetSubscriptionByUserID(UserID uint32) (*models.Subscription, error) {
+	pool := db.GetPool()
+	var subscription models.Subscription
+	err := pool.QueryRow(context.Background(),
+		`SELECT  plan, price, created_at, updated_at, expires_at, status 
+		 FROM subscriptions 
+		 WHERE user_id = $1 
+`,
+		UserID).Scan(
+		&subscription.Plan,
+		&subscription.Price,
+		&subscription.CreatedAt,
+		&subscription.UpdatedAt,
+		&subscription.ExpiresAt,
+		&subscription.Status,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &subscription, nil
 }
