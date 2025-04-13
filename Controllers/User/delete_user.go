@@ -2,14 +2,15 @@ package user
 
 import (
 	"encoding/json"
+	db "github.com/thanksduck/alias-api/Database"
 	"net/http"
 
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -28,13 +29,17 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Password is required", http.StatusBadRequest)
 		return
 	}
-
-	if !utils.CheckPassword(requestData.Password, user.Password) {
-		utils.SendErrorResponse(w, "Password is incorrect", http.StatusBadRequest)
+	savedPassword, err := db.SQL.FindPasswordById(ctx, user.ID)
+	if err != nil {
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
-	err = repository.DeleteUser(user.ID)
+	if !utils.CheckPassword(requestData.Password, savedPassword) {
+		utils.SendErrorResponse(w, "Password is incorrect", http.StatusBadRequest)
+		return
+	}
+	err = db.SQL.DeleteUser(ctx, user.ID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
@@ -42,6 +47,9 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{"message": "User deleted successfully", "status": "success"}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
-	json.NewEncoder(w).Encode(response)
-
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
 }

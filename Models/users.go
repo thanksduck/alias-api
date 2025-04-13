@@ -13,7 +13,6 @@ type User struct {
 	AliasCount        int       `json:"aliasCount"`
 	DestinationCount  int       `json:"destinationCount"`
 	IsPremium         bool      `json:"isPremium"`
-	Plan              *PlanType `json:"plan,omitempty"`
 	Password          string    `json:"-"`
 	Provider          string    `json:"-"`
 	Avatar            string    `json:"avatar,omitempty"`
@@ -23,12 +22,14 @@ type User struct {
 	UpdatedAt         time.Time `json:"-"`
 }
 
-func (u *User) IsPasswordChangedAfter(unixTime int64) bool {
-	if u.PasswordChangedAt.IsZero() {
-		return false
-	}
-	// Adjust for the timezone offset of 5 hours and 30 minutes (19800 seconds)
-	passwordChangedAtUnix := u.PasswordChangedAt.Unix() - 19800
-
-	return passwordChangedAtUnix > unixTime
+type SafeUser struct {
+	Username         string   `json:"username,omitempty"`
+	Name             string   `json:"name,omitempty"`
+	Email            string   `json:"email,omitempty"`
+	IsEmailVerified  bool     `json:"isEmailVerified"`
+	AliasCount       int64    `json:"aliasCount"`
+	DestinationCount int64    `json:"destinationCount"`
+	IsPremium        bool     `json:"isPremium"`
+	Avatar           string   `json:"avatar,omitempty"`
+	Plan             PlanType `json:"plan,omitempty"`
 }

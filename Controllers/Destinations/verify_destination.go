@@ -5,13 +5,16 @@ import (
 	"net/http"
 	"strconv"
 
-	repository "github.com/thanksduck/alias-api/Repository"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
+
 	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func VerifyDestination(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -22,23 +25,21 @@ func VerifyDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid destination ID", http.StatusBadRequest)
 		return
 	}
-	destinationID := uint32(destinationIDInt)
-	destination, err := repository.FindDestinationByID(destinationID)
+	destinationID := int64(destinationIDInt)
+	destination, err := db.SQL.GetCloudflareDestinationID(ctx, &q.GetCloudflareDestinationIDParams{
+		ID:     destinationID,
+		UserID: user.ID,
+	})
 	if err != nil {
 		utils.SendErrorResponse(w, "Destination not found", http.StatusNotFound)
 		return
 	}
-	if destination.Username != user.Username {
-		utils.SendErrorResponse(w, "You are not allowed to verify this destination", http.StatusForbidden)
-		return
-	}
-
-	if destination.Verified {
+	if destination.IsVerified {
 		utils.CreateSendResponse(w, destination, "Destination already verified", http.StatusOK, "destination", user.Username)
 		return
 	}
 
-	destResponse, err := requests.DestinationRequest(`GET`, destination.Domain, destination.Username, destination.CloudflareDestinationID)
+	destResponse, err := requests.DestinationRequest(`GET`, destination.Domain, user.Username, destination.CloudflareDestinationID)
 	if err != nil {
 		fmt.Printf("Error: Destination request failed - %v\n", err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
@@ -54,9 +55,9 @@ func VerifyDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Please check your mail or spam folder and click on verify", http.StatusBadRequest)
 		return
 	}
-	destination.Verified = true
+	destination.IsVerified = true
 
-	err = repository.VerifyDestinationByID(destinationID)
+	err = db.SQL.VerifyDestinationByID(ctx, destinationID)
 	if err != nil {
 		fmt.Printf("Error: Failed to verify destination by ID - %v\n", err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)

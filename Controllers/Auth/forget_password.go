@@ -8,14 +8,16 @@ import (
 	"os"
 	"strings"
 
+	db "github.com/thanksduck/alias-api/Database"
 	emailtemplate "github.com/thanksduck/alias-api/Email_Template"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	repository "github.com/thanksduck/alias-api/Repository"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 	// we will first extract the email from the request payload
+	ctx := r.Context()
 	var requestData struct {
 		Email string `json:"email"`
 	}
@@ -35,20 +37,22 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 
 	// Use a goroutine to process email reset asynchronously also not send emails dont inform user if email is not found
 	go func() {
-		// Find user by email (if exists)
-		user, err := repository.FindUserByUsernameOrEmail("", requestData.Email)
+		user, err := db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{
+			Email: requestData.Email,
+		})
 		if err != nil {
-			// If user not found, do nothing silently
 			return
 		}
 
-		// Additional checks
-		if !user.EmailVerified {
+		if !user.IsEmailVerified {
 			return
 		}
 
-		err = repository.HasNoActiveResetToken(user.ID)
-		if err != nil {
+		_, err = db.SQL.HasNoActiveResetToken(ctx,
+			user.ID,
+		)
+		if err == nil {
+			// has an active token
 			return
 		}
 
@@ -62,33 +66,23 @@ func ForgetPassword(w http.ResponseWriter, r *http.Request) {
 		hashedBytes := hash.Sum(nil)
 		hashedToken := hex.EncodeToString(hashedBytes)
 
-		err = repository.SavePasswordResetToken(user.ID, user.Username, hashedToken)
+		err = db.SQL.CreateNewPasswordResetToken(ctx, &q.CreateNewPasswordResetTokenParams{
+			UserID:             user.ID,
+			Username:           user.Username,
+			PasswordResetToken: hashedToken,
+		})
 		if err != nil {
 			return
 		}
 
 		resetLink := os.Getenv("FRONTEND_HOST") + "/reset-password/" + hashedToken
 		htmlBody, textBody := emailtemplate.ForgetPasswordTemplate(user.Name, resetLink)
-		utils.SendEmail(requestData.Email, "Password Reset Link | One Alias Service", htmlBody, textBody)
+		err = utils.SendEmail(requestData.Email, "Password Reset Link | One Alias Service", htmlBody, textBody)
+		if err != nil {
+			return
+		}
 	}()
 
 	// Always send the same response, regardless of user existence
 	utils.SendSuccessResponse(w, "Reset Link Has Been Sent if it exists. Do check spam folder as well")
 }
-
-/*
-
-	auth := smtp.PlainAuth("", "user@example.com", "password", "mail.example.com")
-
-	// Connect to the server, authenticate, set the sender and recipient,
-	// and send the email all in one step.
-	to := []string{"recipient@example.net"}
-	msg := []byte("To: recipient@example.net\r\n" +
-		"Subject: discount Gophers!\r\n" +
-		"\r\n" +
-		"This is the email body.\r\n")
-	err := smtp.SendMail("mail.example.com:25", auth, "sender@example.org", to, msg)
-	if err != nil {
-		log.Fatal(err)
-	}
-*/

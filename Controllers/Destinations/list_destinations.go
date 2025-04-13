@@ -1,15 +1,16 @@
 package destinations
 
 import (
+	db "github.com/thanksduck/alias-api/Database"
 	"net/http"
 	"strconv"
 
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func ListDestinations(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -18,7 +19,7 @@ func ListDestinations(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You have not created any destinations yet", http.StatusBadRequest)
 		return
 	}
-	destinations, err := repository.FindDestinationsByUserID(user.ID)
+	destinations, err := db.SQL.FindDestinationsByUserID(ctx, user.ID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
@@ -27,7 +28,8 @@ func ListDestinations(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetDestination(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -38,8 +40,8 @@ func GetDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid destination ID", http.StatusBadRequest)
 		return
 	}
-	destinationID := uint32(destinationIDInt)
-	destination, err := repository.FindDestinationByID(destinationID)
+	destinationID := int64(destinationIDInt)
+	destination, err := db.SQL.FindDestinationByID(ctx, destinationID)
 
 	if err != nil {
 		utils.SendErrorResponse(w, "Destination not found", http.StatusNotFound)

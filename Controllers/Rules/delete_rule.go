@@ -5,15 +5,18 @@ import (
 	"net/http"
 	"strings"
 
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
+
 	"strconv"
 
-	repository "github.com/thanksduck/alias-api/Repository"
 	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func DeleteRule(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -25,8 +28,8 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid rule ID", http.StatusBadRequest)
 		return
 	}
-	ruleID := uint32(ruleIDInt)
-	rule, err := repository.FindRuleByID(ruleID)
+	ruleID := int64(ruleIDInt)
+	rule, err := db.SQL.FindRuleByID(ctx, ruleID)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Rule not found", http.StatusNotFound)
@@ -45,7 +48,22 @@ func DeleteRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.DeleteRuleByID(ruleID, user.ID)
+	tx, err := db.DB.Begin(ctx)
+	if err != nil {
+		utils.SendErrorResponse(w, fmt.Sprintf("Failed to begin transaction: %s", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(ctx)
+	qtx := q.New(tx)
+
+	err = qtx.DeleteRuleByID(ctx, ruleID)
+	if err != nil {
+		fmt.Println(err)
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+	_ = qtx.DecrementUserAliasCount(ctx, user.ID)
+	err = tx.Commit(ctx)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)

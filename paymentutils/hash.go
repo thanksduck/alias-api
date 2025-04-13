@@ -48,7 +48,11 @@ func VerifyPhonePeSignature(payload []byte, xVerifyHeader string) bool {
 }
 
 func GenerateTransactionID(username string, planType models.PlanType) string {
-	return fmt.Sprintf("t_%s_%s", username, uuid.New().String()[:8])
+	// Use first 4 chars of username and 6 random chars for a unique ID
+	userPrefix := username[:4] // Safe now since username has min 4 characters
+
+	randPart := uuid.New().String()[:6]
+	return userPrefix + randPart
 }
 
 // GetPhonePeBaseURL returns the appropriate base URL based on environment

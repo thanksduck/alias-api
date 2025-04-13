@@ -2,16 +2,18 @@ package auth
 
 import (
 	"encoding/json"
+	db "github.com/thanksduck/alias-api/Database"
+	models "github.com/thanksduck/alias-api/Models"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"strings"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func Login(w http.ResponseWriter, r *http.Request) {
-
+	ctx := r.Context()
 	var requestData struct {
 		Username string `json:"username"`
 		Email    string `json:"email"`
@@ -49,7 +51,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find user by username or email
-	user, err := repository.FindUserByUsernameOrEmail(username, email)
+	user, err := db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{Username: username, Email: email})
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid email or password. If you used a social sign-in, Please use that method.", http.StatusUnauthorized)
 		return
@@ -59,10 +61,21 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid email or password. If you used a social sign-in, Please use that method.", http.StatusUnauthorized)
 		return
 	}
-	if user.IsPremium {
-		plan, _ := repository.GetPlanByUserID(user.ID)
-		user.Plan = plan
+
+	s := &models.SafeUser{
+		Username:         user.Username,
+		Name:             user.Name,
+		Email:            user.Email,
+		IsPremium:        user.IsPremium,
+		AliasCount:       user.AliasCount,
+		DestinationCount: user.DestinationCount,
+		Avatar:           user.Avatar,
 	}
-	utils.CreateSendResponse(w, user, "Login Successful", http.StatusOK, "user", user.Username)
+
+	// if user.IsPremium {
+	// 	plan, _ := repository.GetPlanByUserID(user.ID)
+	// 	user.Plan = plan
+	// }
+	utils.CreateSendResponse(w, s, "Login Successful", http.StatusOK, "user", user.Username)
 
 }

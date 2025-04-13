@@ -9,7 +9,7 @@ import (
 )
 
 var bufferPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return new(bytes.Buffer)
 	},
 }
@@ -69,14 +69,14 @@ func SendPaymentRequiredResponse(w http.ResponseWriter, message string, plan str
 }
 
 type SuccessResponse struct {
-	Status  string      `json:"status"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data"`
 }
 
-func CreateSendResponse(w http.ResponseWriter, data interface{}, message string, statusCode int, dataName string, username string) {
+func CreateSendResponse(w http.ResponseWriter, data any, message string, statusCode int, dataName string, username string) {
 	response := SuccessResponse{
-		Status:  "success",
+		Success: true,
 		Message: message,
 		Data:    data,
 	}

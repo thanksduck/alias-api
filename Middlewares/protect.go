@@ -2,16 +2,17 @@ package middlewares
 
 import (
 	"errors"
+	db "github.com/thanksduck/alias-api/Database"
 	"net/http"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func Protect(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		var token string
 
 		// Check for token in Authorization header
@@ -40,7 +41,7 @@ func Protect(next http.HandlerFunc) http.HandlerFunc {
 
 		// Get the user from the database
 		username := claims.Username
-		user, err := repository.FindUserByUsernameOrEmail(username, ``)
+		user, err := db.SQL.FindUserByUsername(ctx, username)
 		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				utils.SendErrorResponse(w, "User not found. Please login again.", http.StatusUnauthorized)
@@ -50,14 +51,14 @@ func Protect(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Check if password was changed after the token was issued
-		if user.IsPasswordChangedAfter(claims.IssuedAt.Unix()) {
+		passwordChangedAtUnix := user.PasswordChangedAt.Unix()
+		if passwordChangedAtUnix > claims.IssuedAt.Unix() {
 			utils.SendErrorResponse(w, "User recently changed password! Please login again.", http.StatusUnauthorized)
 			return
 		}
 
 		// Set the user in the request context
-		ctx := utils.SetUserInContext(r.Context(), user)
+		ctx = utils.SetUserInContext(ctx, user)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

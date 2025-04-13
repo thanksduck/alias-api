@@ -15,6 +15,7 @@ func main() {
 	fmt.Println("Starting the application with...")
 	envcheck.Init()
 	db.Connect()
+	db.InitQueries()
 	port, exists := os.LookupEnv("PORT")
 	if !exists {
 		port = "6777"

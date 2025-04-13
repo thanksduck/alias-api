@@ -2,20 +2,17 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
+	db "github.com/thanksduck/alias-api/Database"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	models "github.com/thanksduck/alias-api/Models"
-	repository "github.com/thanksduck/alias-api/Repository"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func Signup(w http.ResponseWriter, r *http.Request) {
-	// get the username , name , email , password , passwordConfirm from the request payloas
-
+	ctx := r.Context()
 	var requestData struct {
 		Username        string `json:"username"`
 		Name            string `json:"name"`
@@ -62,33 +59,23 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Something Went Wrong", http.StatusInternalServerError)
 		return
 	}
-	// create a new user object
-	user := &models.User{
-		Username: username,
-		Name:     requestData.Name,
-		Email:    email,
-		Password: hashedPassword,
-		Provider: "local",
-		Avatar:   requestData.Avatar,
-	}
-
 	// check if the user already exists
-	_, err = repository.FindUserByUsernameOrEmail(user.Username, user.Email)
+	_, err = db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{Username: username, Email: email})
 	if err == nil {
 		utils.SendErrorResponse(w, "User already exists", http.StatusConflict)
 		return
-	} else if err != pgx.ErrNoRows {
-		fmt.Println(err)
-		utils.SendErrorResponse(w, "Error checking user existence", http.StatusInternalServerError)
-		return
 	}
-
-	newUser, err := repository.CreateUser(user)
+	err = db.SQL.CreateUser(ctx, &q.CreateUserParams{Username: username, Name: requestData.Name, Email: email, Password: hashedPassword})
 	if err != nil {
 		utils.SendErrorResponse(w, "Error creating user", http.StatusInternalServerError)
 		return
 	}
 
-	utils.CreateSendResponse(w, newUser, `User Created Successfully`, http.StatusCreated, `user`, newUser.Username)
+	user, err := db.SQL.FindUserByUsername(ctx, username)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error getting user", http.StatusInternalServerError)
+		return
+	}
+	utils.CreateSendResponse(w, user, `User Created Successfully`, http.StatusCreated, `user`, user.Username)
 
 }

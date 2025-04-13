@@ -2,20 +2,24 @@ package premium
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/jackc/pgx/v5"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"strings"
 	"time"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	models "github.com/thanksduck/alias-api/Models"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/paymentutils"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func CreatePayment(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -31,7 +35,7 @@ func CreatePayment(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	url, err := paymentutils.InitialisePaymentAndRedirect(&requestBody, user)
+	url, err := paymentutils.InitialisePaymentAndRedirect(ctx, &requestBody, user)
 	fmt.Printf("%v", err)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
@@ -42,11 +46,13 @@ func CreatePayment(w http.ResponseWriter, r *http.Request) {
 
 // ProcessPaymentAndSubscribe handles payment verification and subscription creation
 func VerifyPaymentAndSubscribe(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
 	}
+
 	var requestBody struct {
 		TxnID string `json:"txnId"`
 		Plan  string `json:"plan"`
@@ -70,64 +76,137 @@ func VerifyPaymentAndSubscribe(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Plan is required", http.StatusBadRequest)
 		return
 	}
-	payment, err := repository.FindPaymentByTxnID(txnID)
+
+	// Find payment by transaction ID
+	payment, err := db.SQL.FindPaymentByTxnID(ctx, txnID)
 	if err != nil {
 		utils.SendErrorResponse(w, fmt.Sprintf("Failed to find payment: %s", err), http.StatusInternalServerError)
 		return
 	}
+
+	// If payment already successful, return existing subscription
 	if payment.Status == "success" {
-		subs, err := repository.GetSubscriptionByUserID(user.ID)
+		subs, err := db.SQL.GetSubscriptionByUserID(ctx, user.ID)
 		if err != nil {
-			utils.SendErrorResponse(w, fmt.Sprintf("Failed: %s", err), http.StatusInternalServerError)
+			utils.SendErrorResponse(w, fmt.Sprintf("Failed to get subscription: %s", err), http.StatusInternalServerError)
+			return
 		}
-		utils.CreateSendResponse(w, subs, "Subscription Reterieved Successfully", http.StatusAccepted, "subscription", user.Username)
+		utils.CreateSendResponse(w, subs, "Subscription Retrieved Successfully", http.StatusAccepted, "subscription", user.Username)
 		return
 	}
+
+	// Verify payment with retry
 	paymentStatus, err := verifyWithRetry(txnID)
 	if err != nil {
 		utils.SendErrorResponse(w, fmt.Sprintf("Failed to verify payment: %s", err), http.StatusInternalServerError)
 		return
 	}
 
-	// If payment is successful, create subscription
+	// Handle payment based on status
 	if paymentStatus == "SUCCESS" {
-		// payment, err := repository.FindPaymentByTxnID(txnID)
-		// if err != nil {
-		// 	utils.SendErrorResponse(w, fmt.Sprintf("Failed to find payment: %s", err), http.StatusInternalServerError)
-		// 	return
-		// }
-		// Calculate expiration based on plan
+		// Determine plan type and duration
 		var months int
-		var planType models.PlanType
+		var planType string
 
-		// Determine plan type and months based on the plan parameter
 		switch plan {
 		case "star":
-			planType = models.StarPlan
-			months = 1 // Assuming star plan is for 1 month
+			planType = "star"
+			months = 1
 		case "galaxy":
-			planType = models.GalaxyPlan
-			months = 1 // Assuming galaxy plan is for 1 month
+			planType = "galaxy"
+			months = 1
 		default:
-			planType = models.StarPlan // Default to star plan as requested
+			planType = "star"
 			months = 1
 		}
 
-		// Create subscription object
-		subscription := &models.Subscription{
-			UserID:    user.ID,
-			Plan:      planType,
-			Price:     uint32(payment.Amount),
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			ExpiresAt: time.Now().AddDate(0, months, 0),
-			Status:    "active",
+		// Begin database transaction
+		tx, err := db.DB.Begin(ctx)
+		if err != nil {
+			utils.SendErrorResponse(w, fmt.Sprintf("Failed to begin transaction: %s", err), http.StatusInternalServerError)
+			return
+		}
+		defer tx.Rollback(ctx)
+
+		qtx := q.New(tx)
+
+		// Update payment status
+		err = qtx.UpdatePaymentStatus(ctx, &q.UpdatePaymentStatusParams{
+			Status: strings.ToLower(paymentStatus),
+			ID:     payment.ID,
+		})
+		if err != nil {
+			utils.SendErrorResponse(w, fmt.Sprintf("Failed to update payment status: %s", err), http.StatusInternalServerError)
+			return
 		}
 
-		// Update payment status, credit and create subscription in a transaction
-		err = repository.UpdatePaymentStatusCreditAndCreateSubscription(subscription, payment, strings.ToLower(paymentStatus))
+		// Check if credit exists for user
+		var creditID int64
+		credit, err := qtx.FindCreditByUserID(ctx, user.ID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Create credit if doesn't exist
+				creditID, err = qtx.CreateCredit(ctx, &q.CreateCreditParams{
+					UserID:  user.ID,
+					Balance: 0, // Starting balance
+				})
+				if err != nil {
+					utils.SendErrorResponse(w, fmt.Sprintf("Failed to create credit: %s", err), http.StatusInternalServerError)
+					return
+				}
+			} else {
+				utils.SendErrorResponse(w, fmt.Sprintf("Failed to find credit: %s", err), http.StatusInternalServerError)
+				return
+			}
+		} else {
+			creditID = credit.ID
+
+			// Update credit balance
+			err = qtx.UpdateCreditBalance(ctx, &q.UpdateCreditBalanceParams{
+				Balance: payment.Amount, // Add payment amount to balance
+				ID:      creditID,
+			})
+			if err != nil {
+				utils.SendErrorResponse(w, fmt.Sprintf("Failed to update credit balance: %s", err), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		// Calculate expiration date
+		expiresAt := time.Now().AddDate(0, months, 0)
+
+		// Create subscription
+		err = qtx.CreateSubscription(ctx, &q.CreateSubscriptionParams{
+			UserID:    user.ID,
+			CreditID:  creditID,
+			Plan:      planType,
+			Price:     payment.Amount,
+			ExpiresAt: expiresAt,
+			Status:    "active",
+		})
 		if err != nil {
 			utils.SendErrorResponse(w, fmt.Sprintf("Failed to create subscription: %s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Update user to premium
+		err = qtx.UpdateUserToPremium(ctx, user.ID)
+		if err != nil {
+			utils.SendErrorResponse(w, fmt.Sprintf("Failed to update user to premium: %s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Commit transaction
+		err = tx.Commit(ctx)
+		if err != nil {
+			utils.SendErrorResponse(w, fmt.Sprintf("Failed to commit transaction: %s", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Get the newly created subscription to return in response
+		subscription, err := db.SQL.GetSubscriptionByUserID(ctx, user.ID)
+		if err != nil {
+			utils.SendErrorResponse(w, fmt.Sprintf("Subscription created but failed to retrieve it: %s", err), http.StatusInternalServerError)
 			return
 		}
 

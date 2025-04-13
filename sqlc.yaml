@@ -1,0 +1,21 @@
+version: "2"
+sql:
+  - schema: "db/migrations"
+    queries: "db/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        package: "q"
+        out: "internal/db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        json_tags_case_style: "camel"
+        emit_params_struct_pointers: true
+        emit_result_struct_pointers: true
+        emit_interface: true
+        # emit_empty_slices: true
+        overrides:
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"

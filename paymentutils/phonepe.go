@@ -2,16 +2,18 @@ package paymentutils
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"io"
 	"net/http"
 	"os"
 	"time"
 
 	models "github.com/thanksduck/alias-api/Models"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"resty.dev/v3"
 )
 
@@ -63,7 +65,8 @@ type PhonePeStatusResponse struct {
 	} `json:"data"`
 }
 
-func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *models.User) (url string, err error) {
+func InitialisePaymentAndRedirect(ctx context.Context, requestBody *models.PaymentRequest, user *q.FindUserByUsernameRow) (url string, err error) {
+	// now we have the transaction id we will create the payment in the database behind the scenes in go routine
 	merchantID := os.Getenv("PHONEPE_MERCHENT_ID")
 	txnID := GenerateTransactionID(user.Username, requestBody.Plan)
 
@@ -138,8 +141,7 @@ func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *mode
 	if redirectURL == "" {
 		return "", fmt.Errorf("empty redirect URL in response")
 	}
-	// now we have the transaction id we will create the payment in the database behind the scenes in go routine
-	newPayment := models.Payment{
+	newPayment := &q.InitialisePaymentParams{
 		UserID:  user.ID,
 		Type:    "credit",
 		Gateway: "phonepe",
@@ -147,12 +149,10 @@ func InitialisePaymentAndRedirect(requestBody *models.PaymentRequest, user *mode
 		Amount:  int64(amount / 100),
 		Status:  "pending",
 	}
-
-	err = repository.InitialisePayment(&newPayment)
+	err = db.SQL.InitialisePayment(ctx, newPayment)
 	if err != nil {
 		return "", fmt.Errorf("failed to create payment record: %w", err)
 	}
-
 	return redirectURL, nil
 }
 
