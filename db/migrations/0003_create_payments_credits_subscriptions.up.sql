@@ -14,7 +14,7 @@ CREATE TABLE "payments" (
 -- Credits table
 CREATE TABLE "credits" (
   "id" bigserial PRIMARY KEY,
-  "user_id" bigint NOT NULL,
+  "user_id" bigint NOT NULL UNIQUE,
   "balance" bigint NOT NULL,
   "is_active" boolean NOT NULL DEFAULT true,
   "created_at" timestamptz NOT NULL DEFAULT now(),

@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	db "github.com/thanksduck/alias-api/Database"
+	requests "github.com/thanksduck/alias-api/Requests"
 	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"strings"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
@@ -58,9 +58,9 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 	// Check if destination already exists
 	destination, err := db.SQL.FindDestinationByEmailAndDomain(ctx, &q.FindDestinationByEmailAndDomainParams{Domain: domain,
 		DestinationEmail: destinationEmail})
-	if err != nil {
+	if err == nil {
 		fmt.Println(err)
-		utils.SendErrorResponse(w, "Error finding destination", http.StatusInternalServerError)
+		utils.SendErrorResponse(w, "Destination already exist", http.StatusConflict)
 		return
 	}
 	if destination != nil {
@@ -108,9 +108,15 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Error creating destination", http.StatusInternalServerError)
 		return
 	}
-	_ = qtx.IncrementUserDestinationCount(ctx, user.ID)
-
-	tx.Commit(ctx)
-
+	err = qtx.IncrementUserDestinationCount(ctx, user.ID)
+	if err != nil {
+		fmt.Println(err)
+		utils.SendErrorResponse(w, "Error incrementing user destination count", http.StatusInternalServerError)
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		fmt.Println(err)
+		utils.SendErrorResponse(w, fmt.Sprintf("Failed to commit transaction"), http.StatusInternalServerError)
+	}
 	utils.CreateSendResponse(w, nil, "Destination Created Successfully", http.StatusCreated, "destination", user.Username)
 }

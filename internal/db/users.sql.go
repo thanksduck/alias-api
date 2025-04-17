@@ -133,7 +133,7 @@ func (q *Queries) FindPasswordById(ctx context.Context, id int64) (string, error
 
 const findUserByID = `-- name: FindUserByID :one
 SELECT id, username, name, email, alias_count, destination_count, is_premium,
-       provider, avatar, password_changed_at, active,  is_email_verified, created_at,updated_at
+       provider, avatar, password_changed_at, is_active,  is_email_verified, created_at,updated_at
 FROM users
 WHERE id = $1
 `
@@ -149,7 +149,7 @@ type FindUserByIDRow struct {
 	Provider          string    `json:"provider"`
 	Avatar            string    `json:"avatar"`
 	PasswordChangedAt time.Time `json:"passwordChangedAt"`
-	Active            bool      `json:"active"`
+	IsActive          bool      `json:"isActive"`
 	IsEmailVerified   bool      `json:"isEmailVerified"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
@@ -169,7 +169,7 @@ func (q *Queries) FindUserByID(ctx context.Context, id int64) (*FindUserByIDRow,
 		&i.Provider,
 		&i.Avatar,
 		&i.PasswordChangedAt,
-		&i.Active,
+		&i.IsActive,
 		&i.IsEmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -179,7 +179,7 @@ func (q *Queries) FindUserByID(ctx context.Context, id int64) (*FindUserByIDRow,
 
 const findUserByUsername = `-- name: FindUserByUsername :one
 SELECT id, username, name, email, alias_count, destination_count, is_premium,
-       provider, avatar, password_changed_at, active,  is_email_verified, created_at,updated_at
+       provider, avatar, password_changed_at, is_active,  is_email_verified, created_at,updated_at
 FROM users
 WHERE username = $1
 `
@@ -195,7 +195,7 @@ type FindUserByUsernameRow struct {
 	Provider          string    `json:"provider"`
 	Avatar            string    `json:"avatar"`
 	PasswordChangedAt time.Time `json:"passwordChangedAt"`
-	Active            bool      `json:"active"`
+	IsActive          bool      `json:"isActive"`
 	IsEmailVerified   bool      `json:"isEmailVerified"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
@@ -215,7 +215,7 @@ func (q *Queries) FindUserByUsername(ctx context.Context, username string) (*Fin
 		&i.Provider,
 		&i.Avatar,
 		&i.PasswordChangedAt,
-		&i.Active,
+		&i.IsActive,
 		&i.IsEmailVerified,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -225,7 +225,7 @@ func (q *Queries) FindUserByUsername(ctx context.Context, username string) (*Fin
 
 const findUserByUsernameOrEmail = `-- name: FindUserByUsernameOrEmail :one
 SELECT id, username, name, email, alias_count, destination_count, is_premium,
-       provider, avatar, password_changed_at, active, password, is_email_verified, created_at, updated_at
+       provider, avatar, password_changed_at, is_active, password, is_email_verified, created_at, updated_at
 FROM users
 WHERE username = $1 OR email = $2
 `
@@ -246,7 +246,7 @@ type FindUserByUsernameOrEmailRow struct {
 	Provider          string    `json:"provider"`
 	Avatar            string    `json:"avatar"`
 	PasswordChangedAt time.Time `json:"passwordChangedAt"`
-	Active            bool      `json:"active"`
+	IsActive          bool      `json:"isActive"`
 	Password          string    `json:"password"`
 	IsEmailVerified   bool      `json:"isEmailVerified"`
 	CreatedAt         time.Time `json:"createdAt"`
@@ -267,7 +267,7 @@ func (q *Queries) FindUserByUsernameOrEmail(ctx context.Context, arg *FindUserBy
 		&i.Provider,
 		&i.Avatar,
 		&i.PasswordChangedAt,
-		&i.Active,
+		&i.IsActive,
 		&i.Password,
 		&i.IsEmailVerified,
 		&i.CreatedAt,

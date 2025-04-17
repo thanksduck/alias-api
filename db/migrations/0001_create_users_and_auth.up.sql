@@ -12,7 +12,7 @@ CREATE TABLE "users" (
   "provider" varchar NOT NULL DEFAULT 'local', 
   "avatar" varchar NOT NULL DEFAULT 'https://n3y.in/ETzABq',
   "password_changed_at" timestamptz NOT NULL DEFAULT('0001-01-01 00:00:00Z'),
-  "active" boolean NOT NULL DEFAULT true,
+  "is_active" boolean NOT NULL DEFAULT true,
   "created_at" timestamptz NOT NULL DEFAULT now(),
   "updated_at" timestamptz NOT NULL DEFAULT now()
 );
@@ -31,8 +31,8 @@ CREATE TABLE "user_auth" (
 -- Social Profiles table
 CREATE TABLE "social_profiles" (
   "id" bigserial PRIMARY KEY,
-  "user_id" bigint NOT NULL,
-  "username" varchar NOT NULL,
+  "user_id" bigint NOT NULL UNIQUE,
+  "username" varchar NOT NULL UNIQUE,
   "github" varchar NOT NULL DEFAULT 'NULL',
   "google" varchar NOT NULL DEFAULT 'NULL',
   "facebook" varchar NOT NULL DEFAULT 'NULL',

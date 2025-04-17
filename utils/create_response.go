@@ -69,14 +69,14 @@ func SendPaymentRequiredResponse(w http.ResponseWriter, message string, plan str
 }
 
 type SuccessResponse struct {
-	Success bool   `json:"success"`
+	Status  string `json:"status"`
 	Message string `json:"message"`
 	Data    any    `json:"data"`
 }
 
 func CreateSendResponse(w http.ResponseWriter, data any, message string, statusCode int, dataName string, username string) {
 	response := SuccessResponse{
-		Success: true,
+		Status:  "success",
 		Message: message,
 		Data:    data,
 	}

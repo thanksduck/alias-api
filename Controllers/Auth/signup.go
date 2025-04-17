@@ -2,6 +2,7 @@ package auth
 
 import (
 	"encoding/json"
+	models "github.com/thanksduck/alias-api/Models"
 	"net/http"
 	"strings"
 
@@ -76,6 +77,15 @@ func Signup(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Error getting user", http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, user, `User Created Successfully`, http.StatusCreated, `user`, user.Username)
+	s := &models.SafeUser{
+		Username:         user.Username,
+		Name:             user.Name,
+		Email:            user.Email,
+		IsPremium:        user.IsPremium,
+		AliasCount:       user.AliasCount,
+		DestinationCount: user.DestinationCount,
+		Avatar:           user.Avatar,
+	}
+	utils.CreateSendResponse(w, s, `User Created Successfully`, http.StatusCreated, `user`, user.Username)
 
 }

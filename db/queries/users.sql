@@ -12,13 +12,13 @@ RETURNING id, username, name, email, alias_count, destination_count, provider, a
 
 -- name: FindUserByID :one
 SELECT id, username, name, email, alias_count, destination_count, is_premium,
-       provider, avatar, password_changed_at, active,  is_email_verified, created_at,updated_at
+       provider, avatar, password_changed_at, is_active,  is_email_verified, created_at,updated_at
 FROM users
 WHERE id = $1;
 
 -- name: FindUserByUsername :one
 SELECT id, username, name, email, alias_count, destination_count, is_premium,
-       provider, avatar, password_changed_at, active,  is_email_verified, created_at,updated_at
+       provider, avatar, password_changed_at, is_active,  is_email_verified, created_at,updated_at
 FROM users
 WHERE username = $1;
 
@@ -29,7 +29,7 @@ WHERE id = $1;
 
 -- name: FindUserByUsernameOrEmail :one
 SELECT id, username, name, email, alias_count, destination_count, is_premium,
-       provider, avatar, password_changed_at, active, password, is_email_verified, created_at, updated_at
+       provider, avatar, password_changed_at, is_active, password, is_email_verified, created_at, updated_at
 FROM users
 WHERE username = $1 OR email = $2;
 

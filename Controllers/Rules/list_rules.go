@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	db "github.com/thanksduck/alias-api/Database"
 	"net/http"
 	"strconv"
@@ -21,6 +22,7 @@ func ListRules(w http.ResponseWriter, r *http.Request) {
 	}
 	rules, err := db.SQL.FindRulesByUserID(ctx, user.ID)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}

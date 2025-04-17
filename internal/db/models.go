@@ -90,7 +90,7 @@ type User struct {
 	Provider          string    `json:"provider"`
 	Avatar            string    `json:"avatar"`
 	PasswordChangedAt time.Time `json:"passwordChangedAt"`
-	Active            bool      `json:"active"`
+	IsActive          bool      `json:"isActive"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
 }
