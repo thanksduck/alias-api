@@ -3,16 +3,18 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
-	models "github.com/thanksduck/alias-api/Models"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -43,11 +45,13 @@ func HandleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 		GoogleOauthConfig.ClientID = os.Getenv("GOOGLE_CLIENT_ID")
 		GoogleOauthConfig.ClientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
 	}
-	url := GoogleOauthConfig.AuthCodeURL(OauthStateString)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	Url := GoogleOauthConfig.AuthCodeURL(OauthStateString)
+	http.Redirect(w, r, Url, http.StatusTemporaryRedirect)
 }
 
 func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	content, err := GetUserInfo(r.FormValue("state"), r.FormValue("code"))
 	if err != nil {
 		fmt.Println("Error getting user info:", err)
@@ -69,7 +73,7 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get name from Google profile data
+	// Determine user name
 	name, _ := userInfo["name"].(string)
 	if name == "" {
 		givenName, _ := userInfo["given_name"].(string)
@@ -81,106 +85,136 @@ func HandleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-
-	// If still no name, fallback to email username
 	if name == "" {
-		nameParts := strings.Split(email, "@")
-		if len(nameParts) > 0 {
-			name = nameParts[0]
+		name = strings.Split(email, "@")[0]
+	}
+
+	// Try to find existing user
+	user, err := db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{
+		Username: "", // ignored if empty
+		Email:    email,
+	})
+
+	var isNewUser bool
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			isNewUser = true
+		} else {
+			fmt.Println("Error finding user:", err)
+			utils.SendErrorResponse(w, "Error finding user", http.StatusInternalServerError)
+			return
 		}
 	}
 
-	existingUser, err := repository.FindUserByUsernameOrEmail("", email)
-	if err != nil && err != pgx.ErrNoRows {
-		fmt.Println("Error finding user:", err)
-		utils.SendErrorResponse(w, "Error finding user", http.StatusInternalServerError)
-		return
-	}
-
-	var user *models.User
-	if existingUser != nil {
-		user = existingUser
-		if user.Provider != "google" && user.Provider != "github" {
-			updated := false
-
-			if !user.EmailVerified {
-				user.EmailVerified = true
-				updated = true
-			}
-
-			if user.Avatar == "" {
-				user.Avatar = getStringValue(userInfo, "picture", "")
-				updated = true
-			}
-
-			user.Provider = "google"
-			updated = true
-
-			if updated {
-				_, err = repository.UpdateUser(user.ID, user)
-			}
-		}
-	} else {
-		username := strings.Split(email, "@")[0]
+	var username string
+	if isNewUser {
+		username = strings.Split(email, "@")[0]
 		if len(username) > 15 {
 			username = username[:10]
 		}
-		usernameExists, err := repository.FindUserByUsernameOrEmail(username, "")
-		if err != nil && err != pgx.ErrNoRows {
-			fmt.Println("Error finding user by username:", err)
-			utils.SendErrorResponse(w, "Error finding user by username", http.StatusInternalServerError)
-			return
-		}
-		if usernameExists != nil {
+
+		// Check for username conflict
+		if _, err := db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{
+			Username: username,
+			Email:    "",
+		}); err == nil {
 			username = username + "1"
 		}
 
-		user = &models.User{
-			Email:         email,
-			Name:          name,
-			Username:      username,
-			EmailVerified: true,
-			Provider:      "google",
-			Avatar:        getStringValue(userInfo, "picture", ""),
-			Password:      " ",
-		}
-		user, err = repository.CreateOrUpdateUser(user)
-		if err != nil && err != pgx.ErrNoRows {
-			fmt.Println("Error creating/updating user:", err)
-			utils.SendErrorResponse(w, "Error creating/updating user", http.StatusInternalServerError)
+		// Create new user using `CreateOrUpdateUser`
+		now := time.Now()
+		_, err = db.SQL.CreateOrUpdateUser(ctx, &q.CreateOrUpdateUserParams{
+			Email:           email,
+			Username:        username,
+			Name:            name,
+			IsEmailVerified: true,
+			Provider:        "google",
+			Avatar:          getStringValue(userInfo, "picture", ""),
+			Password:        " ", // Google users don't use passwords
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		})
+		if err != nil {
+			fmt.Println("Error creating new user:", err)
+			utils.SendErrorResponse(w, "Error creating user", http.StatusInternalServerError)
 			return
 		}
+	} else {
+		// Existing user update (if needed)
+		updated := false
+
+		if !user.IsEmailVerified {
+			user.IsEmailVerified = true
+			updated = true
+		}
+
+		if user.Avatar == "" {
+			user.Avatar = getStringValue(userInfo, "picture", "")
+			updated = true
+		}
+
+		if user.Provider != "google" {
+			user.Provider = "google"
+			updated = true
+		}
+
+		if updated {
+			user.UpdatedAt = time.Now()
+			_, err = db.SQL.CreateOrUpdateUser(ctx, &q.CreateOrUpdateUserParams{
+				Email:           user.Email,
+				Username:        user.Username,
+				Name:            user.Name,
+				IsEmailVerified: user.IsEmailVerified,
+				Provider:        user.Provider,
+				Avatar:          user.Avatar,
+				Password:        user.Password,
+				CreatedAt:       user.CreatedAt,
+				UpdatedAt:       user.UpdatedAt,
+			})
+			if err != nil {
+				fmt.Println("Error updating user:", err)
+				utils.SendErrorResponse(w, "Error updating user", http.StatusInternalServerError)
+				return
+			}
+		}
 	}
 
-	if err != nil && err != pgx.ErrNoRows {
-		fmt.Println("Error updating/creating user:", err)
-		utils.SendErrorResponse(w, "Error updating/creating user", http.StatusInternalServerError)
-		return
-	}
-
-	socialProfile, err := repository.FindSocialProfileByIDOrUsername(user.ID, user.Username)
-	if err != nil && err != pgx.ErrNoRows {
-		fmt.Println("Error finding social profile:", err)
-		utils.SendErrorResponse(w, "Error finding social profile", http.StatusInternalServerError)
+	// Upsert Social Profile
+	socialProfile, err := db.SQL.FindSocialProfileByUserID(ctx, user.ID)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		fmt.Println("Error fetching social profile:", err)
+		utils.SendErrorResponse(w, "Error fetching social profile", http.StatusInternalServerError)
 		return
 	}
 
 	if socialProfile == nil {
-		socialProfile = &models.SocialProfile{
-			UserID:   user.ID,
-			Username: user.Username,
-		}
+		_, err = db.SQL.CreateOrUpdateSocialProfile(ctx, &q.CreateOrUpdateSocialProfileParams{
+			UserID:    user.ID,
+			Username:  user.Username,
+			Google:    getStringValue(userInfo, "sub", ""),
+			Github:    "NULL",
+			Facebook:  "NULL",
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		})
+	} else {
+		_, err = db.SQL.CreateOrUpdateSocialProfile(ctx, &q.CreateOrUpdateSocialProfileParams{
+			UserID:    socialProfile.UserID,
+			Username:  socialProfile.Username,
+			Google:    getStringValue(userInfo, "sub", ""),
+			Github:    socialProfile.Github,
+			Facebook:  socialProfile.Facebook,
+			CreatedAt: socialProfile.CreatedAt,
+			UpdatedAt: time.Now(),
+		})
 	}
-	socialProfile.Google = getStringValue(userInfo, "sub", "")
-
-	_, err = repository.CreateOrUpdateSocialProfile(socialProfile)
-	if err != nil && err != pgx.ErrNoRows {
-		fmt.Println("Error updating social profile:", err)
-		utils.SendErrorResponse(w, "Error updating social profile", http.StatusInternalServerError)
+	if err != nil {
+		fmt.Println("Error creating/updating social profile:", err)
+		utils.SendErrorResponse(w, "Error creating/updating social profile", http.StatusInternalServerError)
 		return
 	}
 
-	RedirectToFrontend(w, r, user)
+	RedirectToFrontend(w, r, user.Username)
 }
 
 // Helper function to safely get string values from the map
@@ -215,9 +249,9 @@ func GetUserInfo(state string, code string) ([]byte, error) {
 	return contents, nil
 }
 
-func RedirectToFrontend(w http.ResponseWriter, r *http.Request, user *models.User) {
+func RedirectToFrontend(w http.ResponseWriter, r *http.Request, username string) {
 	// Create a token or session for the user here if needed
-	token, err := utils.GenerateTempToken(user.Username)
+	token, err := utils.GenerateTempToken(username)
 	if err != nil {
 		http.Error(w, "Error creating token", http.StatusInternalServerError)
 		return

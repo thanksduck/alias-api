@@ -3,24 +3,24 @@ package destinations
 import (
 	"encoding/json"
 	"fmt"
+	db "github.com/thanksduck/alias-api/Database"
+	requests "github.com/thanksduck/alias-api/Requests"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	models "github.com/thanksduck/alias-api/Models"
-	repository "github.com/thanksduck/alias-api/Repository"
-	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func CreateDestination(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
 	}
-	if !user.EmailVerified {
+	if !user.IsEmailVerified {
 		utils.SendErrorResponse(w, "Please Verify Your Email to add Destination", http.StatusForbidden)
 		return
 	}
@@ -45,7 +45,7 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 	}
 	destinationEmail := strings.ToLower(requestBody.DestinationEmail)
 	if !middlewares.ValidBody.IsValidEmail(destinationEmail) {
-		utils.SendErrorResponse(w, "Destination Cant be Proccessed", http.StatusUnprocessableEntity)
+		utils.SendErrorResponse(w, "Destination Cant be Processed", http.StatusUnprocessableEntity)
 		return
 	}
 	if !user.IsPremium && destinationEmail != user.Email {
@@ -56,10 +56,11 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 	domain := strings.ToLower(requestBody.Domain)
 
 	// Check if destination already exists
-	destination, err := repository.FindDestinationByEmailAndDomain(destinationEmail, domain)
-	if err != nil && err != pgx.ErrNoRows {
+	destination, err := db.SQL.FindDestinationByEmailAndDomain(ctx, &q.FindDestinationByEmailAndDomainParams{Domain: domain,
+		DestinationEmail: destinationEmail})
+	if err == nil {
 		fmt.Println(err)
-		utils.SendErrorResponse(w, "Error finding destination", http.StatusInternalServerError)
+		utils.SendErrorResponse(w, "Destination already exist", http.StatusConflict)
 		return
 	}
 	if destination != nil {
@@ -84,21 +85,38 @@ func CreateDestination(w http.ResponseWriter, r *http.Request) {
 		verificationCheck = true
 	}
 
-	newDest := &models.Destination{
+	newDest := &q.CreateDestinationParams{
 		Username:                user.Username,
 		UserID:                  user.ID,
 		DestinationEmail:        destinationEmail,
 		Domain:                  domain,
 		CloudflareDestinationID: destinationResponse.Result.ID,
-		Verified:                verificationCheck,
+		IsVerified:              verificationCheck,
 	}
+	// Begin database transaction
+	tx, err := db.DB.Begin(ctx)
+	if err != nil {
+		utils.SendErrorResponse(w, fmt.Sprintf("Failed to begin transaction: %s", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(ctx)
+	qtx := q.New(tx)
 
-	newDestination, err := repository.CreateDestination(newDest)
+	err = qtx.CreateDestination(ctx, newDest)
 	if err != nil {
 		fmt.Println(err)
 		utils.SendErrorResponse(w, "Error creating destination", http.StatusInternalServerError)
 		return
 	}
-
-	utils.CreateSendResponse(w, newDestination, "Destination Created Successfully", http.StatusCreated, "destination", user.Username)
+	err = qtx.IncrementUserDestinationCount(ctx, user.ID)
+	if err != nil {
+		fmt.Println(err)
+		utils.SendErrorResponse(w, "Error incrementing user destination count", http.StatusInternalServerError)
+	}
+	err = tx.Commit(ctx)
+	if err != nil {
+		fmt.Println(err)
+		utils.SendErrorResponse(w, fmt.Sprintf("Failed to commit transaction"), http.StatusInternalServerError)
+	}
+	utils.CreateSendResponse(w, nil, "Destination Created Successfully", http.StatusCreated, "destination", user.Username)
 }

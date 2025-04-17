@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// HashPassword Returns the hash of password with our credentials
 func HashPassword(password string) (string, error) {
 	salt := make([]byte, 16)
 	_, err := rand.Read(salt)

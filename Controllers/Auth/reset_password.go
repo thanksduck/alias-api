@@ -2,14 +2,17 @@ package auth
 
 import (
 	"encoding/json"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
+	"time"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func ResetPassword(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var requestData struct {
 		Password        string `json:"password"`
 		PasswordConfirm string `json:"passwordConfirm"`
@@ -36,22 +39,9 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Passwords do not match", http.StatusBadRequest)
 		return
 	}
-
-	user, err := repository.FindUserByPasswordResetToken(hashedToken)
+	userID, err := db.SQL.FindUserByValidResetToken(ctx, hashedToken)
 	if err != nil {
 		utils.SendErrorResponse(w, "Invalid reset link", http.StatusBadRequest)
-		return
-	}
-	userID := user.ID
-
-	err = repository.IsPasswordResetTokenExpired(hashedToken)
-	if err != nil {
-		err = repository.RemovePasswordResetToken(userID)
-		if err != nil {
-			utils.SendErrorResponse(w, "An error occurred. Please try again", http.StatusInternalServerError)
-			return
-		}
-		utils.SendErrorResponse(w, "Reset link has expired. Please request a new one", http.StatusBadRequest)
 		return
 	}
 
@@ -60,12 +50,19 @@ func ResetPassword(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "An error occurred. Please try again", http.StatusInternalServerError)
 		return
 	}
-
-	err = repository.UpdatePassword(userID, hashedPassword)
+	err = db.SQL.UpdatePasswordUser(ctx, &q.UpdatePasswordUserParams{
+		Password:          hashedPassword,
+		PasswordChangedAt: time.Now(),
+		ID:                userID,
+	})
 	if err != nil {
 		utils.SendErrorResponse(w, "An error occurred. Please try again", http.StatusInternalServerError)
 		return
 	}
-
+	err = db.SQL.UpdatePasswordAuth(ctx, userID)
+	if err != nil {
+		utils.SendErrorResponse(w, "Password updated but failed to clean reset token", http.StatusInternalServerError)
+		return
+	}
 	utils.CreateSendResponse(w, nil, "Password reset successful. You can now login with your new password", http.StatusOK, "message", `0`)
 }

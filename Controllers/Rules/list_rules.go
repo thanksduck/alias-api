@@ -1,15 +1,17 @@
 package rules
 
 import (
+	"fmt"
+	db "github.com/thanksduck/alias-api/Database"
 	"net/http"
 	"strconv"
 
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func ListRules(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -18,19 +20,20 @@ func ListRules(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You have not created any aliases yet", http.StatusBadRequest)
 		return
 	}
-
-	rules, err := repository.FindRulesByUserID(user.ID)
+	rules, err := db.SQL.FindRulesByUserID(ctx, user.ID)
 	if err != nil {
+		fmt.Println(err)
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
-	utils.CreateSendResponse(w, rules, "Rules Retreived Successfully", http.StatusOK, "rules", user.Username)
+	utils.CreateSendResponse(w, rules, "Rules Retrieved Successfully", http.StatusOK, "rules", user.Username)
 
 }
 
 func GetRule(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -41,8 +44,8 @@ func GetRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid rule ID", http.StatusBadRequest)
 		return
 	}
-	ruleID := uint32(ruleIDInt)
-	rule, err := repository.FindRuleByID(ruleID)
+	ruleID := int64(ruleIDInt)
+	rule, err := db.SQL.FindRuleByID(ctx, ruleID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Rule not found", http.StatusNotFound)
 		return

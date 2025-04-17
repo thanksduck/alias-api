@@ -4,12 +4,14 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"os"
+	"strings"
 
 	auth "github.com/thanksduck/alias-api/Controllers/Auth"
 	emailtemplate "github.com/thanksduck/alias-api/Email_Template"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
@@ -23,12 +25,13 @@ func GenerateToken() (string, error) {
 }
 
 func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
 	}
-	if user.EmailVerified || user.Provider == `localVerified` || user.Provider == `github` || user.Provider == `google` {
+	if user.IsEmailVerified || user.Provider == `localVerified` || user.Provider == `github` || user.Provider == `google` {
 		utils.CreateSendResponse(w, user, "User already verified", http.StatusOK, "user", user.Username)
 		return
 	}
@@ -42,8 +45,7 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Error generating token", http.StatusInternalServerError)
 		return
 	}
-
-	err = repository.UpdateProviderByID(user.ID, token)
+	err = db.SQL.UpdateProviderByID(ctx, &q.UpdateProviderByIDParams{Provider: token, ID: user.ID})
 	if err != nil {
 		utils.SendErrorResponse(w, "Error updating user", http.StatusInternalServerError)
 		return
@@ -64,16 +66,15 @@ func GenerateVerifyUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func VerifyUser(w http.ResponseWriter, r *http.Request) {
-
-	username := r.PathValue("username")
+	ctx := r.Context()
+	username := strings.ToLower(r.PathValue("username"))
 	token := r.PathValue("token")
 
 	if username == "" || token == "" {
 		utils.SendErrorResponse(w, "Invalid request", http.StatusBadRequest)
 		return
 	}
-
-	user, err := repository.FindUserByUsernameOrEmail(username, ``)
+	user, err := db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{Username: username})
 	if err != nil {
 		utils.SendErrorResponse(w, "User not found", http.StatusNotFound)
 		return
@@ -83,18 +84,16 @@ func VerifyUser(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid token", http.StatusBadRequest)
 		return
 	}
-
-	err = repository.VerifyEmailByID(user.ID)
+	err = db.SQL.VerifyEmailByID(ctx, user.ID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Error verifying email", http.StatusInternalServerError)
 		return
 	}
-
-	err = repository.UpdateProviderByID(user.ID, `localVerified`)
+	err = db.SQL.UpdateProviderByID(ctx, &q.UpdateProviderByIDParams{Provider: token, ID: user.ID})
 	if err != nil {
 		utils.SendErrorResponse(w, "Error updating user", http.StatusInternalServerError)
 		return
 	}
-	user.EmailVerified = true
-	auth.RedirectToFrontend(w, r, user)
+	user.IsEmailVerified = true
+	auth.RedirectToFrontend(w, r, user.Username)
 }

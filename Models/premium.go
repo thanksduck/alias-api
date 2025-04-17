@@ -53,5 +53,4 @@ type Subscription struct {
 type PaymentRequest struct {
 	Plan   PlanType `json:"plan"`
 	Months int      `json:"months"`
-	// Mobile string   `json:"mobile"`
 }

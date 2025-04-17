@@ -2,14 +2,13 @@ package user
 
 import (
 	"encoding/json"
+	"github.com/thanksduck/alias-api/utils"
 	"net/http"
 )
 
 func LogoutUser(w http.ResponseWriter, r *http.Request) {
-
-	// Clear the cookie
 	cookie := &http.Cookie{
-		Name:     "token", // Replace with your actual cookie name
+		Name:     "token",
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
@@ -20,5 +19,9 @@ func LogoutUser(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{"message": "Successfully logged out", "status": "success"}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
 }

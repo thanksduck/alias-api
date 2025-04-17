@@ -2,18 +2,20 @@ package rules
 
 import (
 	"encoding/json"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"strconv"
 	"strings"
 
 	models "github.com/thanksduck/alias-api/Models"
-	repository "github.com/thanksduck/alias-api/Repository"
 	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func UpdateRule(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -25,8 +27,8 @@ func UpdateRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid rule ID", http.StatusBadRequest)
 		return
 	}
-	ruleID := uint32(ruleIDInt)
-	rule, err := repository.FindRuleByID(ruleID)
+	ruleID := int64(ruleIDInt)
+	rule, err := db.SQL.FindRuleByID(ctx, ruleID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Rule not found", http.StatusNotFound)
 		return
@@ -70,7 +72,14 @@ func UpdateRule(w http.ResponseWriter, r *http.Request) {
 	rule.Comment = ruleData.Comment
 	rule.Name = ruleData.Name
 
-	updatedRule, err := repository.UpdateRuleByID(ruleID, rule)
+	updatedRule := &q.UpdateRuleByIDParams{
+		Name:             rule.Name,
+		DestinationEmail: rule.DestinationEmail,
+		AliasEmail:       rule.AliasEmail,
+		Comment:          rule.Comment,
+		ID:               ruleID,
+	}
+	err = db.SQL.UpdateRuleByID(ctx, updatedRule)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return

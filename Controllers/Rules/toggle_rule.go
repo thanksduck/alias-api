@@ -2,17 +2,18 @@ package rules
 
 import (
 	"fmt"
+	db "github.com/thanksduck/alias-api/Database"
 	"net/http"
 	"strconv"
 	"strings"
 
-	repository "github.com/thanksduck/alias-api/Repository"
 	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func ToggleRule(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -23,8 +24,8 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid rule ID", http.StatusBadRequest)
 		return
 	}
-	ruleID := uint32(ruleIDInt)
-	rule, err := repository.FindRuleByID(ruleID)
+	ruleID := int64(ruleIDInt)
+	rule, err := db.SQL.FindRuleByID(ctx, ruleID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Rule not found", http.StatusNotFound)
 		return
@@ -33,8 +34,7 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "You are not allowed to toggle this rule", http.StatusForbidden)
 		return
 	}
-
-	_, err = repository.FindDestinationByEmail(rule.DestinationEmail)
+	_, err = db.SQL.FindDestinationByEmail(ctx, rule.DestinationEmail)
 	if err != nil {
 		message := fmt.Sprintf("The destination email %s has been removed by You. You can update the rule name and comment, but the rule must remain inactive until same destination is not added", rule.DestinationEmail)
 		utils.SendErrorResponse(w, message, http.StatusNotFound)
@@ -48,13 +48,13 @@ func ToggleRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = repository.ToggleRuleByID(ruleID)
+	err = db.SQL.ToggleRuleByID(ctx, ruleID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
-	rule.Active = !rule.Active
+	rule.IsActive = !rule.IsActive
 
 	utils.CreateSendResponse(w, rule, "Rule Toggled Successfully", http.StatusOK, "rule", user.Username)
 }

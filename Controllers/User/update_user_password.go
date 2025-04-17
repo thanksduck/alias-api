@@ -2,15 +2,17 @@ package user
 
 import (
 	"encoding/json"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -27,13 +29,14 @@ func UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !utils.CheckPassword(requestData.CurrentPassword, user.Password) {
-		utils.SendErrorResponse(w, "Current password is incorrect", http.StatusBadRequest)
+	if requestData.Password == "" || requestData.PasswordConfirm == "" || requestData.CurrentPassword == "" {
+		utils.SendErrorResponse(w, "All fields are required", http.StatusBadRequest)
 		return
 	}
 
-	if requestData.Password == "" || requestData.PasswordConfirm == "" || requestData.CurrentPassword == "" {
-		utils.SendErrorResponse(w, "All fields are required", http.StatusBadRequest)
+	savedPassword, _ := db.SQL.FindPasswordById(ctx, user.ID)
+	if !utils.CheckPassword(requestData.CurrentPassword, savedPassword) {
+		utils.SendErrorResponse(w, "Current password is incorrect", http.StatusBadRequest)
 		return
 	}
 
@@ -53,14 +56,12 @@ func UpdateUserPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.Password = hashedPassword
-
-	err = repository.UpdatePassword(user.ID, hashedPassword)
+	err = db.SQL.UpdatePasswordUser(ctx, &q.UpdatePasswordUserParams{ID: user.ID, Password: hashedPassword})
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
-	utils.CreateSendResponse(w, user, "Password updated successfully", http.StatusOK, "user", user.Username)
+	utils.CreateSendResponse(w, nil, "Password updated successfully", http.StatusOK, "user", user.Username)
 
 }

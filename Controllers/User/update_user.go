@@ -2,17 +2,19 @@ package user
 
 import (
 	"encoding/json"
+	db "github.com/thanksduck/alias-api/Database"
+	models "github.com/thanksduck/alias-api/Models"
+	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"strings"
 
-	"github.com/jackc/pgx/v5"
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
-	repository "github.com/thanksduck/alias-api/Repository"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
-	user, ok := utils.GetUserFromContext(r.Context())
+	ctx := r.Context()
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
@@ -28,9 +30,9 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
-	// atleast one field is required
+	// at least one field is required
 	if requestData.Username == "" && requestData.Name == "" && requestData.Email == "" && requestData.Avatar == "" {
-		utils.SendErrorResponse(w, "Atleast one field is required", http.StatusBadRequest)
+		utils.SendErrorResponse(w, "At least one field is required", http.StatusBadRequest)
 		return
 	}
 	if requestData.Username != "" {
@@ -42,12 +44,9 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// check if the user already exists
-		_, err = repository.FindUserByUsernameOrEmail(requestData.Username, ``)
+		_, err = db.SQL.FindUserByUsername(ctx, requestData.Username)
 		if err == nil {
 			utils.SendErrorResponse(w, "Username Is Taken", http.StatusConflict)
-			return
-		} else if err != pgx.ErrNoRows {
-			utils.SendErrorResponse(w, "Error checking user existence", http.StatusInternalServerError)
 			return
 		}
 		user.Username = requestData.Username
@@ -69,10 +68,26 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if requestData.Avatar != "" {
 		user.Avatar = requestData.Avatar
 	}
-	updatedUser, err := repository.UpdateUser(user.ID, user)
+	err = db.SQL.UpdateUser(ctx, &q.UpdateUserParams{
+		Username: user.Username,
+		Name:     user.Name,
+		Avatar:   user.Avatar,
+		Email:    user.Email,
+		ID:       user.ID,
+	})
 	if err != nil {
 		utils.SendErrorResponse(w, "Failed to update user", http.StatusInternalServerError)
 		return
 	}
-	utils.CreateSendResponse(w, updatedUser, "User updated successfully", http.StatusOK, "user", updatedUser.Username)
+	s := &models.SafeUser{
+		Username:         user.Username,
+		Name:             user.Name,
+		Email:            user.Email,
+		IsPremium:        user.IsPremium,
+		IsEmailVerified:  user.IsEmailVerified,
+		AliasCount:       user.AliasCount,
+		DestinationCount: user.DestinationCount,
+		Avatar:           user.Avatar,
+	}
+	utils.CreateSendResponse(w, s, "User updated successfully", http.StatusOK, "user", user.Username)
 }

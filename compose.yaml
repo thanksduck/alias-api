@@ -1,6 +1,6 @@
 services:
   alias-api-app:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: alias-api

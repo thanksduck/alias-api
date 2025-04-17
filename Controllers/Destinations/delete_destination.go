@@ -2,20 +2,24 @@ package destinations
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
+
 	"log"
 	"net/http"
 	"strconv"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
-	models "github.com/thanksduck/alias-api/Models"
-	repository "github.com/thanksduck/alias-api/Repository"
 	requests "github.com/thanksduck/alias-api/Requests"
 	"github.com/thanksduck/alias-api/utils"
 )
 
 func DeleteDestination(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	var requestBody struct {
 		Password string `json:"password"`
 	}
@@ -25,13 +29,14 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, ok := utils.GetUserFromContext(r.Context())
+	user, ok := utils.GetUserFromContext(ctx)
 	if !ok {
 		utils.SendErrorResponse(w, "User not found", http.StatusUnauthorized)
 		return
 	}
 
-	if !utils.CheckPassword(requestBody.Password, user.Password) {
+	savedPassword, _ := db.SQL.FindPasswordById(ctx, user.ID)
+	if !utils.CheckPassword(requestBody.Password, savedPassword) {
 		utils.SendErrorResponse(w, "Password is required to delete a destination address", http.StatusUnauthorized)
 		return
 	}
@@ -43,34 +48,32 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	destinationID := uint32(destinationIDInt)
-	destination, err := repository.FindDestinationByID(destinationID)
+	destinationID := int64(destinationIDInt)
+	destination, err := db.SQL.GetCloudflareDestinationID(ctx, &q.GetCloudflareDestinationIDParams{
+		ID:     destinationID,
+		UserID: user.ID,
+	})
 	if err != nil {
 		utils.SendErrorResponse(w, "Destination not found", http.StatusNotFound)
 		return
 	}
 
-	if destination.Username != user.Username {
-		utils.SendErrorResponse(w, "You are not allowed to delete this destination", http.StatusForbidden)
-		return
-	}
-
-	_, err = requests.DestinationRequest(`DELETE`, destination.Domain, destination.Username, destination.CloudflareDestinationID)
+	_, err = requests.DestinationRequest(`DELETE`, destination.Domain, user.Username, destination.CloudflareDestinationID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
-	err = repository.DeleteDestinationByID(destinationID, user.ID)
+	err = db.SQL.DeleteDestinationByID(ctx, destinationID)
 	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
 	domain := destination.Domain
-	rules, err := repository.FindActiveRulesByDestinationEmail(destination.DestinationEmail)
+	rules, err := db.SQL.FindActiveRulesByDestinationEmail(ctx, destination.DestinationEmail)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			utils.CreateSendResponse(w, nil, "Destination Deleted Successfully", http.StatusNoContent, "destination", user.Username)
 			return
 		}
@@ -89,7 +92,7 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 	for _, rule := range rules {
 		wg.Add(1)
 		// Capture rule in the closure correctly
-		go func(rule models.Rule) {
+		go func(rule *q.FindActiveRulesByDestinationEmailRow) {
 			defer wg.Done()
 			// Acquire semaphore
 			sem <- struct{}{}
@@ -122,11 +125,24 @@ func DeleteDestination(w http.ResponseWriter, r *http.Request) {
 		utils.SendErrorResponse(w, "Something went wrong while processing rules", http.StatusInternalServerError)
 		return
 	}
-	err = repository.MakeAllRuleInactiveByDestinationEmail(destination.DestinationEmail)
-	if err != nil && err != pgx.ErrNoRows {
+
+	tx, err := db.DB.Begin(ctx)
+	if err != nil {
+		utils.SendErrorResponse(w, fmt.Sprintf("Failed to begin transaction: %s", err), http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback(ctx)
+	qtx := q.New(tx)
+	err = qtx.MakeAllRuleInactiveByDestinationEmail(ctx, destination.DestinationEmail)
+	if err != nil {
 		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
-
+	_ = qtx.DecrementUserDestinationCount(ctx, user.ID)
+	err = tx.Commit(ctx)
+	if err != nil {
+		utils.SendErrorResponse(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
 	utils.CreateSendResponse(w, nil, "Destination Deleted Successfully", http.StatusNoContent, "destination", user.Username)
 }
