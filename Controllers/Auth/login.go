@@ -2,11 +2,12 @@ package auth
 
 import (
 	"encoding/json"
+	"net/http"
+	"strings"
+
 	db "github.com/thanksduck/alias-api/Database"
 	models "github.com/thanksduck/alias-api/Models"
 	q "github.com/thanksduck/alias-api/internal/db"
-	"net/http"
-	"strings"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	"github.com/thanksduck/alias-api/utils"
@@ -72,10 +73,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		Avatar:           user.Avatar,
 	}
 
-	// if user.IsPremium {
-	// 	plan, _ := repository.GetPlanByUserID(user.ID)
-	// 	user.Plan = plan
-	// }
+	if user.IsPremium {
+		plan, _ := db.SQL.GetPlanByUserID(ctx, user.ID)
+		s.Plan = models.PlanType(plan)
+	}
 	utils.CreateSendResponse(w, s, "Login Successful", http.StatusOK, "user", user.Username)
 
 }
