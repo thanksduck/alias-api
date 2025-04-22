@@ -11,6 +11,7 @@ import (
 
 func UserRouter(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v2/user", middlewares.Protect(user.GetUser))
+	mux.HandleFunc("GET /api/v2/user/plan", middlewares.Protect(user.GetUserWithPlan))
 	mux.HandleFunc("GET /api/v2/user/{username}/verify", middlewares.Protect(user.GenerateVerifyUser))
 	mux.HandleFunc("GET /api/v2/user/{username}/verify/{token}", user.VerifyUser)
 	mux.HandleFunc("PATCH /api/v2/user/{username}", middlewares.Protect(user.UpdateUser))

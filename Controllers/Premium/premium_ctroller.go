@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgx/v5"
-	db "github.com/thanksduck/alias-api/Database"
-	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 
 	middlewares "github.com/thanksduck/alias-api/Middlewares"
 	models "github.com/thanksduck/alias-api/Models"
@@ -148,7 +149,7 @@ func VerifyPaymentAndSubscribe(w http.ResponseWriter, r *http.Request) {
 				// Create credit if doesn't exist
 				creditID, err = qtx.CreateCredit(ctx, &q.CreateCreditParams{
 					UserID:  user.ID,
-					Balance: 0, // Starting balance
+					Balance: payment.Amount, // Starting balance
 				})
 				if err != nil {
 					utils.SendErrorResponse(w, fmt.Sprintf("Failed to create credit: %s", err), http.StatusInternalServerError)
