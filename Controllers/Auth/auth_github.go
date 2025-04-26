@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	db "github.com/thanksduck/alias-api/Database"
-	q "github.com/thanksduck/alias-api/internal/db"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	db "github.com/thanksduck/alias-api/Database"
+	q "github.com/thanksduck/alias-api/internal/db"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/thanksduck/alias-api/utils"
@@ -42,17 +43,14 @@ func HandleGithubLogin(w http.ResponseWriter, r *http.Request) {
 
 func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-
 	conf := getGithubOAuthConfig()
 	code := r.URL.Query().Get("code")
-
 	t, err := conf.Exchange(context.Background(), code)
 	if err != nil {
 		fmt.Println("Error exchanging code:", err)
 		utils.SendErrorResponse(w, "Error exchanging code", http.StatusBadRequest)
 		return
 	}
-
 	client := conf.Client(context.Background(), t)
 
 	// Get user profile
@@ -145,25 +143,27 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var username string
+	// Variable to store the user object (new or existing)
+	var userObj q.FindUserByUsernameOrEmailRow
+
 	if isNewUser {
-		username = githubUsername
+		username := githubUsername
 		if len(username) > 15 {
 			username = username[:10]
 		}
 
 		// Check for username conflict
-		existingUser, err := db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{
+		conflictUser, err := db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{
 			Username: username,
 			Email:    "",
 		})
-		if err == nil && existingUser != nil {
+		if err == nil && conflictUser != nil {
 			username = username + "1"
 		}
 
-		// Create new user
+		// Create new user and capture the returned user
 		now := time.Now()
-		_, err = db.SQL.CreateOrUpdateUser(ctx, &q.CreateOrUpdateUserParams{
+		newUser, err := db.SQL.CreateOrUpdateUser(ctx, &q.CreateOrUpdateUserParams{
 			Email:           email,
 			Username:        username,
 			Name:            name,
@@ -180,79 +180,111 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Fetch the newly created user to get the ID
-		user, err = db.SQL.FindUserByUsernameOrEmail(ctx, &q.FindUserByUsernameOrEmailParams{
-			Email: email,
-		})
-		if err != nil {
-			fmt.Println("Error fetching new user:", err)
-			utils.SendErrorResponse(w, "Error fetching new user", http.StatusInternalServerError)
-			return
+		// Copy fields from returned user to our user object
+		userObj = q.FindUserByUsernameOrEmailRow{
+			ID:                newUser.ID,
+			Username:          newUser.Username,
+			Name:              newUser.Name,
+			Email:             newUser.Email,
+			AliasCount:        newUser.AliasCount,
+			DestinationCount:  newUser.DestinationCount,
+			IsPremium:         newUser.IsPremium,
+			Provider:          newUser.Provider,
+			Avatar:            newUser.Avatar,
+			PasswordChangedAt: newUser.PasswordChangedAt,
+			IsActive:          newUser.IsActive,
+			Password:          newUser.Password,
+			IsEmailVerified:   newUser.IsEmailVerified,
+			CreatedAt:         newUser.CreatedAt,
+			UpdatedAt:         newUser.UpdatedAt,
 		}
 	} else {
-		// Existing user update (if needed)
+		// Existing user - store in userObj
+		userObj = *user
 		updated := false
 
-		if !user.IsEmailVerified {
-			user.IsEmailVerified = true
+		if !userObj.IsEmailVerified {
+			userObj.IsEmailVerified = true
 			updated = true
 		}
 
-		if user.Avatar == "" {
-			user.Avatar = getStringValue(userData, "avatar_url", "")
+		if userObj.Avatar == "" {
+			userObj.Avatar = getStringValue(userData, "avatar_url", "")
 			updated = true
 		}
 
-		if user.Provider != "github" && user.Provider != "google" {
-			user.Provider = "github"
+		if userObj.Provider != "github" && userObj.Provider != "google" {
+			userObj.Provider = "github"
 			updated = true
 		}
 
-		if user.Name != name {
-			user.Name = name
+		if userObj.Name != name {
+			userObj.Name = name
 			updated = true
 		}
 
 		if updated {
-			user.UpdatedAt = time.Now()
-			_, err = db.SQL.CreateOrUpdateUser(ctx, &q.CreateOrUpdateUserParams{
-				Email:           user.Email,
-				Username:        user.Username,
-				Name:            user.Name,
-				IsEmailVerified: user.IsEmailVerified,
-				Provider:        user.Provider,
-				Avatar:          user.Avatar,
-				Password:        user.Password,
-				CreatedAt:       user.CreatedAt,
-				UpdatedAt:       user.UpdatedAt,
+			userObj.UpdatedAt = time.Now()
+			updatedUser, err := db.SQL.CreateOrUpdateUser(ctx, &q.CreateOrUpdateUserParams{
+				Email:           userObj.Email,
+				Username:        userObj.Username,
+				Name:            userObj.Name,
+				IsEmailVerified: userObj.IsEmailVerified,
+				Provider:        userObj.Provider,
+				Avatar:          userObj.Avatar,
+				Password:        userObj.Password,
+				CreatedAt:       userObj.CreatedAt,
+				UpdatedAt:       userObj.UpdatedAt,
 			})
 			if err != nil {
 				fmt.Println("Error updating user:", err)
 				utils.SendErrorResponse(w, "Error updating user", http.StatusInternalServerError)
 				return
 			}
+
+			// Update userObj with the returned values
+			userObj = q.FindUserByUsernameOrEmailRow{
+				ID:                updatedUser.ID,
+				Username:          updatedUser.Username,
+				Name:              updatedUser.Name,
+				Email:             updatedUser.Email,
+				AliasCount:        updatedUser.AliasCount,
+				DestinationCount:  updatedUser.DestinationCount,
+				IsPremium:         updatedUser.IsPremium,
+				Provider:          updatedUser.Provider,
+				Avatar:            updatedUser.Avatar,
+				PasswordChangedAt: updatedUser.PasswordChangedAt,
+				IsActive:          updatedUser.IsActive,
+				Password:          updatedUser.Password,
+				IsEmailVerified:   updatedUser.IsEmailVerified,
+				CreatedAt:         updatedUser.CreatedAt,
+				UpdatedAt:         updatedUser.UpdatedAt,
+			}
 		}
 	}
 
-	// Upsert Social Profile
-	socialProfile, err := db.SQL.FindSocialProfileByUserID(ctx, user.ID)
+	// Now use userObj.ID to find or create social profile
+	socialProfile, err := db.SQL.FindSocialProfileByUserID(ctx, userObj.ID)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		fmt.Println("Error fetching social profile:", err)
 		utils.SendErrorResponse(w, "Error fetching social profile", http.StatusInternalServerError)
 		return
 	}
 
-	if socialProfile == nil {
+	now := time.Now()
+	if err != nil && errors.Is(err, pgx.ErrNoRows) {
+		// No existing social profile, create a new one
 		_, err = db.SQL.CreateOrUpdateSocialProfile(ctx, &q.CreateOrUpdateSocialProfileParams{
-			UserID:    user.ID,
-			Username:  user.Username,
+			UserID:    userObj.ID,
+			Username:  userObj.Username,
 			Google:    "NULL",
 			Github:    githubUsername,
 			Facebook:  "NULL",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
+			CreatedAt: now,
+			UpdatedAt: now,
 		})
 	} else {
+		// Update existing social profile
 		_, err = db.SQL.CreateOrUpdateSocialProfile(ctx, &q.CreateOrUpdateSocialProfileParams{
 			UserID:    socialProfile.UserID,
 			Username:  socialProfile.Username,
@@ -260,7 +292,7 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 			Github:    githubUsername,
 			Facebook:  socialProfile.Facebook,
 			CreatedAt: socialProfile.CreatedAt,
-			UpdatedAt: time.Now(),
+			UpdatedAt: now,
 		})
 	}
 	if err != nil {
@@ -269,5 +301,5 @@ func HandleGithubCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	RedirectToFrontend(w, r, user.Username)
+	RedirectToFrontend(w, r, userObj.Username)
 }

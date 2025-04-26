@@ -25,6 +25,7 @@ type Querier interface {
 	DeleteDestinationByID(ctx context.Context, id int64) error
 	DeleteRuleByID(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
+	DeleteWebAuthnCredential(ctx context.Context, id int64) error
 	FindActiveRulesByDestinationEmail(ctx context.Context, destinationEmail string) ([]*FindActiveRulesByDestinationEmailRow, error)
 	FindCreditByUserID(ctx context.Context, userID int64) (*Credit, error)
 	FindDestinationByEmail(ctx context.Context, destinationEmail string) (*FindDestinationByEmailRow, error)
@@ -48,16 +49,22 @@ type Querier interface {
 	FindUserByUsername(ctx context.Context, username string) (*FindUserByUsernameRow, error)
 	FindUserByUsernameOrEmail(ctx context.Context, arg *FindUserByUsernameOrEmailParams) (*FindUserByUsernameOrEmailRow, error)
 	FindUserByValidResetToken(ctx context.Context, passwordResetToken string) (int64, error)
+	FindWebAuthnCredentialByUserAndCredID(ctx context.Context, arg *FindWebAuthnCredentialByUserAndCredIDParams) (*WebauthnCredential, error)
 	GetActivePasswordResetTokenExpiry(ctx context.Context, userID int64) (time.Time, error)
 	GetCloudflareDestinationID(ctx context.Context, arg *GetCloudflareDestinationIDParams) (*GetCloudflareDestinationIDRow, error)
 	GetPasswordResetTokenExpiry(ctx context.Context, passwordResetToken string) (time.Time, error)
 	GetPlanByUserID(ctx context.Context, userID int64) (string, error)
 	GetSubscriptionByUserID(ctx context.Context, userID int64) (*GetSubscriptionByUserIDRow, error)
+	GetWebAuthnCredentialByCredentialID(ctx context.Context, credentialID []byte) (*WebauthnCredential, error)
+	GetWebAuthnCredentialByID(ctx context.Context, id int64) (*WebauthnCredential, error)
 	HasNoActiveResetToken(ctx context.Context, userID int64) (int64, error)
 	IncrementUserAliasCount(ctx context.Context, id int64) error
 	IncrementUserDestinationCount(ctx context.Context, id int64) error
 	// queries/payments.sql
 	InitialisePayment(ctx context.Context, arg *InitialisePaymentParams) error
+	InsertWebAuthnCredential(ctx context.Context, arg *InsertWebAuthnCredentialParams) (*WebauthnCredential, error)
+	ListWebAuthnCredentialsByUserID(ctx context.Context, userID int64) ([]*WebauthnCredential, error)
+	ListWebAuthnCredentialsByUsername(ctx context.Context, username string) ([]*WebauthnCredential, error)
 	MakeAllRuleInactiveByDestinationEmail(ctx context.Context, destinationEmail string) error
 	RemovePasswordResetToken(ctx context.Context, userID int64) error
 	// queries/user_auth.sql
@@ -72,6 +79,7 @@ type Querier interface {
 	UpdateRuleByID(ctx context.Context, arg *UpdateRuleByIDParams) error
 	UpdateUser(ctx context.Context, arg *UpdateUserParams) error
 	UpdateUserToPremium(ctx context.Context, id int64) error
+	UpdateWebAuthnSignCount(ctx context.Context, arg *UpdateWebAuthnSignCountParams) error
 	VerifyDestinationByID(ctx context.Context, id int64) error
 	VerifyEmailByID(ctx context.Context, id int64) error
 }

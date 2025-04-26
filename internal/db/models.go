@@ -104,3 +104,17 @@ type UserAuth struct {
 	CreatedAt            time.Time `json:"createdAt"`
 	UpdatedAt            time.Time `json:"updatedAt"`
 }
+
+type WebauthnCredential struct {
+	ID                  int64     `json:"id"`
+	UserID              int64     `json:"userId"`
+	Username            string    `json:"username"`
+	CredentialID        []byte    `json:"credentialId"`
+	PublicKey           []byte    `json:"publicKey"`
+	SignCount           int64     `json:"signCount"`
+	Transports          []string  `json:"transports"`
+	AuthenticatorAaguid string    `json:"authenticatorAaguid"`
+	IsBackup            bool      `json:"isBackup"`
+	CreatedAt           time.Time `json:"createdAt"`
+	UpdatedAt           time.Time `json:"updatedAt"`
+}
